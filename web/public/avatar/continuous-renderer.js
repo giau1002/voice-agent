@@ -182,6 +182,7 @@
     }
     render(weights={rest:1},blink=0,debug=false,force=false,motion={}){
       if(typeof weights==='number')weights={rest:1-weights,AA:weights};const values=controls(weights,blink,motion);
+      if(Number.isFinite(motion.mouthOpening))values[0]=clamp(motion.mouthOpening);
       const pose=this.hasCharacterLayer||this.software?.layer?characterPose(motion):[0,0,0,0,0];
       const key=[...values,...pose].map(v=>v.toFixed(5)).join('|');
       if(this.lost||!force&&key===this.lastKey)return;this.lastKey=key;if(this.software){this.software.render(values,motion);return;}

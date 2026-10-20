@@ -143,6 +143,10 @@ khi có lời nói thực tế. Trong Cài đặt có mức cử động đầu,
 âm khép môi vẫn khép, khoảng im tiếng có nhịp nhả mềm. Mức há hàm chọn trên các
 khẩu hình đã hiệu chỉnh, không kéo giãn cả khuôn mặt; không đổi tốc độ đọc hay
 nhịp ước lượng từ chỉ để làm miệng mở lớn.
+Độ mở hàm cuối cùng (sau nhấn âm và năng lượng audio) đi qua bộ giảm chấn có
+giới hạn vận tốc/gia tốc để môi dưới không bật nhanh. Kênh hàm dùng mục tiêu
+khẩu hình gốc, không chồng thêm hai lần làm mượt; độ rộng môi vẫn được làm
+mượt riêng. Biên độ mặc định 150% và mức tối đa 180% giữ nguyên.
 
 Web Audio phân tích **remote track của agent**, không phân tích micro người dùng
 để nhép miệng avatar. Môi chỉ cử động khi agent đang nói và audio nhận được có

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { expect, it } from 'vitest';
 import { LipSync } from './lip-sync';
+import { JawMotion } from './jaw-motion';
 
 function loadAsset(file: string) {
   const sandbox = { module: { exports: {} as any } };
@@ -30,4 +31,23 @@ it('preserves complete closures and bounds opening to the calibrated mouth atlas
   const medium = renderer.controls({ AA: .4 }, 0, { jawDepth: 1.2 })[0];
   const deeper = renderer.controls({ AA: .4 }, 0, { jawDepth: 1.5 })[0];
   expect(deeper).toBeGreaterThan(medium);
+});
+
+it('passes the damped final opening to the renderer without applying jaw gain twice', () => {
+  const jaw = new JawMotion();
+  let amounts: number[] = [];
+  const rig = { lastKey: '', software: { render(values: number[]) { amounts = values; } } };
+  const target = renderer.controls({ AA: 1 }, 0, { jawDepth: 1.5, articulation: .9 })[0];
+  const output: number[] = [];
+  for (let i = 0; i < 30; i++) {
+    const opening = jaw.update(target, 1 / 60);
+    renderer.PortraitRenderer.prototype.render.call(rig, { AA: 1 }, .4, false, true, {
+      jawDepth: 1.5, articulation: .9, mouthOpening: opening,
+    });
+    expect(amounts[0]).toBe(opening);
+    expect(amounts[4]).toBe(.4);
+    output.push(amounts[0]);
+  }
+  expect(output[0]).toBeLessThan(.02);
+  expect(output.at(-1)).toBeGreaterThan(.99);
 });

@@ -28,6 +28,7 @@ interface Window {
     };
   };
   PortraitRendering: {
+    controls(weights: Pose, blink: number, motion?: Record<string, number>): number[];
     PortraitRenderer: new (canvas: HTMLCanvasElement, portrait: HTMLImageElement, options: {
       motionAtlas: HTMLImageElement; flowAtlas: HTMLImageElement; mouthAtlas: HTMLImageElement;
       characterLayer: HTMLImageElement; forceSoftware?: boolean; transparentBackground?: boolean;

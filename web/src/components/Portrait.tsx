@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import type { VoiceClient } from '../lib/voice-client';
 import type { LipSync } from '../lib/lip-sync';
+import { JawMotion } from '../lib/jaw-motion';
 
 export interface PortraitOptions { motion: boolean; intensity: number; jaw: number; delay: number }
 export function Portrait({ client, lips, options }: {
@@ -36,6 +37,7 @@ export function Portrait({ client, lips, options }: {
         const blink = new window.PortraitCore.BlinkController({ min: 2000, max: 3000, duration: 190 });
         const motion = new window.PortraitGentleMotion.GentleMotion();
         const core = window.PortraitCore;
+        const jaw = new JawMotion();
         let weights = core.pose('rest'), last = performance.now(), heardAt = -Infinity;
         let lastMotion = config.current.motion, lastIntensity = config.current.intensity;
         motion.enabled = lastMotion; motion.setIntensity(lastIntensity, last);
@@ -50,11 +52,17 @@ export function Portrait({ client, lips, options }: {
           const speaking = client.speaking;
           const sample = lips.sample(now - cfg.delay, shifted, speaking);
           weights = core.smoothPose(weights, sample.weights, dt);
+          // Smooth the complete jaw target once. Pose smoothing still handles
+          // lip width and smile, but must not add a second delay to the jaw.
+          const mouthTarget = window.PortraitRendering.controls(sample.weights, 0, {
+            jawDepth: cfg.jaw, articulation: sample.articulation,
+          })[0];
+          const mouthOpening = jaw.update(mouthTarget, dt);
           if (cfg.motion !== lastMotion) { motion.setEnabled(cfg.motion, now); lastMotion = cfg.motion; }
           if (cfg.intensity !== lastIntensity) { motion.setIntensity(cfg.intensity, now); lastIntensity = cfg.intensity; }
           const body = motion.update(now, { speaking: speaking && now - heardAt < 450, reduced: document.hidden });
           renderer.render(weights, blink.update(now), false, false, {
-            ...body, jawDepth: cfg.jaw, articulation: sample.articulation,
+            ...body, jawDepth: cfg.jaw, articulation: sample.articulation, mouthOpening,
           });
           if (renderer.lost) setError('Bộ vẽ đã bị gián đoạn. Tải lại trang để khôi phục.');
           frame = requestAnimationFrame(tick);
