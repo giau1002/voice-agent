@@ -3,6 +3,10 @@
 Trợ lý hội thoại hai chiều bằng **LiveKit Agents + Soniox STT/TTS**, có nhân vật
 từ ảnh nhép miệng theo âm thanh, chớp mắt và nghiêng đầu khi nói.
 
+Nhân vật trò chuyện như một người bạn đồng hành: xưng mình–bạn, vui vẻ và hóm
+hỉnh vừa phải, biết lắng nghe khi người dùng muốn tâm sự. Tính cách được cấu hình
+trong `prompts/system.md`; lời chào đầu phiên đặt bằng `AGENT_GREETING`.
+
 Project độc lập, tích hợp luồng voice từ `kiosk-voice-agent` và bộ vẽ nhân vật
 Portrait Motion Studio V13. Không cần backend GPU để vẽ avatar. Silero VAD là
 phần ML chạy trên CPU; STT, LLM và TTS mặc định gọi dịch vụ qua mạng.
@@ -42,7 +46,9 @@ Giao diện xanh–trắng đặt nhân vật cùng nền ảnh gốc bên trái
 Khung chat hiển thị lời nói đang nhận, câu trả lời và cho phép nhập tin nhắn;
 các câu hỏi gợi ý giúp bắt đầu cuộc trò chuyện. Màn hình nhỏ chuyển thành bố cục
 dọc. Độ há hàm mặc định **120%**; điều chỉnh micro, loa và chuyển động tại nút
-cài đặt. Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
+cài đặt. Ảnh nhân vật không có chữ phủ hay nút chớp mắt; chớp mắt tự động vẫn
+hoạt động. Phần đầu khung trò chuyện có nền xanh với chữ và biểu tượng màu trắng.
+Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
 
 ## Ngày giờ và thông tin thực tế
 

@@ -46,8 +46,8 @@ it('places the composer in the chatbot and drafts a suggestion before connection
   const chat = screen.getByRole('complementary', { name: 'Trò chuyện cùng trợ lý' });
   expect(within(chat).getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
   expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Bạn có thể hỗ trợ tôi những gì?' }));
-  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue('Bạn có thể hỗ trợ tôi những gì?');
+  fireEvent.click(screen.getByRole('button', { name: 'Nói chuyện với mình một chút nhé.' }));
+  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue('Nói chuyện với mình một chút nhé.');
   expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveFocus();
   expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled();
   expect(mocks.sendText).not.toHaveBeenCalled();

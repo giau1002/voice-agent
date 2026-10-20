@@ -4,16 +4,13 @@ import type { VoiceClient } from '../lib/voice-client';
 import type { LipSync } from '../lib/lip-sync';
 
 export interface PortraitOptions { motion: boolean; intensity: number; jaw: number; delay: number }
-export function Portrait({ client, lips, options, onLevel }: {
-  client: VoiceClient; lips: LipSync; options: PortraitOptions; onLevel: (level: number) => void;
+export function Portrait({ client, lips, options }: {
+  client: VoiceClient; lips: LipSync; options: PortraitOptions;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const config = useRef(options); config.current = options;
-  const levelCallback = useRef(onLevel); levelCallback.current = onLevel;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [engine, setEngine] = useState('');
-  const blinkRef = useRef<{ trigger(now: number): void } | null>(null);
 
   useEffect(() => {
     let alive = true, frame = 0, renderer: RigRenderer | null = null;
@@ -35,12 +32,11 @@ export function Portrait({ client, lips, options, onLevel }: {
           old.replaceWith(next); canvas.current = next;
           renderer = new window.PortraitRendering.PortraitRenderer(next, photo, { ...assets, forceSoftware: true });
         }
-        setEngine(renderer.engine); setLoading(false);
+        setLoading(false);
         const blink = new window.PortraitCore.BlinkController({ min: 2000, max: 3000, duration: 190 });
-        blinkRef.current = blink;
         const motion = new window.PortraitGentleMotion.GentleMotion();
         const core = window.PortraitCore;
-        let weights = core.pose('rest'), last = performance.now(), uiAt = 0, heardAt = -Infinity;
+        let weights = core.pose('rest'), last = performance.now(), heardAt = -Infinity;
         let lastMotion = config.current.motion, lastIntensity = config.current.intensity;
         motion.enabled = lastMotion; motion.setIntensity(lastIntensity, last);
         const levels: { time: number; level: number }[] = [];
@@ -61,21 +57,18 @@ export function Portrait({ client, lips, options, onLevel }: {
             ...body, jawDepth: cfg.jaw, articulation: sample.articulation,
           });
           if (renderer.lost) setError('Bộ vẽ đã bị gián đoạn. Tải lại trang để khôi phục.');
-          if (now - uiAt > 100) { uiAt = now; levelCallback.current(level); }
           frame = requestAnimationFrame(tick);
         }
         frame = requestAnimationFrame(tick);
       } catch (exception) { if (alive) { setError(exception instanceof Error ? exception.message : 'Không tải được nhân vật.'); setLoading(false); } }
     }
     void setup();
-    return () => { alive = false; cancelAnimationFrame(frame); blinkRef.current = null; images.forEach(image => { image.onload = null; image.onerror = null; }); };
+    return () => { alive = false; cancelAnimationFrame(frame); images.forEach(image => { image.onload = null; image.onerror = null; }); };
   }, [client, lips]);
 
   return <div className="portrait-wrap">
     <canvas ref={canvas} width={560} height={700} aria-label="Nhân vật trợ lý chuyển động theo giọng trả lời" />
-    <button className="blink-button" onClick={() => blinkRef.current?.trigger(performance.now())}>◡ Chớp mắt</button>
     {loading && <div className="portrait-cover"><LoaderCircle className="spin" />Đang chuẩn bị nhân vật</div>}
     {error && <div className="portrait-cover error" role="alert">{error}</div>}
-    {engine === 'software' && <span className="fallback-note">Chế độ tương thích · CPU</span>}
   </div>;
 }

@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     llm_allow_no_key: bool = False
     llm_temperature: float = Field(0.4, ge=0, le=2)
     agent_prompt_file: str = "prompts/system.md"
-    agent_greeting: str = "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?"
+    agent_greeting: str = "Chào bạn, mình đây! Hôm nay bạn muốn tâm sự hay nghe một chuyện vui?"
     agent_timezone: str = "Asia/Ho_Chi_Minh"
     web_search_enabled: bool = True
     web_search_model: str = "gemini-2.5-flash"
