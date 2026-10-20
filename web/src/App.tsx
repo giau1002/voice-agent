@@ -29,7 +29,7 @@ export default function App() {
   const [input, setInput] = useState(''); const [output, setOutput] = useState('');
   const [options, setOptions] = useState<PortraitOptions>({
     motion: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    intensity: 1, jaw: 1, delay: 60,
+    intensity: 1, jaw: 1.2, delay: 60,
   });
   const transcript = useRef<HTMLDivElement>(null);
   const [lips] = useState(() => new LipSync());
