@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, AudioLines, Check, CircleHelp, Headphones, LoaderCircle, MessageCircle, Mic, MicOff, Phone, PhoneOff, Send, Settings2, Sparkles, Square, Volume2, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { Check, CircleHelp, LoaderCircle, Mic, MicOff, Paperclip, Phone, PhoneOff, Send, Settings2, Square, UserRound, Volume2, X } from 'lucide-react';
+import { AssistantAvatar } from './components/AssistantAvatar';
 import { Portrait, type PortraitOptions } from './components/Portrait';
 import { SearchReference } from './components/SearchReference';
+import { SupportOptions } from './components/SupportOptions';
 import { VoiceClient, type AgentState, type LinkState, type Message } from './lib/voice-client';
 import { LipSync } from './lib/lip-sync';
 
@@ -10,13 +12,14 @@ interface Config {
   providers: { transport: string; stt: string; tts: string; llm: string; vad: string };
 }
 const stateLabels: Record<AgentState, string> = { idle: 'Sẵn sàng trò chuyện', initializing: 'Đang gọi trợ lý', listening: 'Tôi đang lắng nghe', thinking: 'Đang nghĩ câu trả lời', speaking: 'Trợ lý đang nói' };
-const suggestions = ['Nói chuyện với mình một chút nhé.', 'Kể mình nghe một chuyện vui đi.', 'Cùng nghĩ một ý tưởng thú vị nhé.'];
+const timeFormatter = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' });
 
 export default function App() {
   const [link, setLink] = useState<LinkState>('offline');
   const [agent, setAgent] = useState<AgentState>('idle');
   const [config, setConfig] = useState<Config | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<(Message & { createdAt: number })[]>([]);
+  const [openedAt] = useState(() => Date.now());
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [access, setAccess] = useState('');
@@ -25,6 +28,7 @@ export default function App() {
   const [playback, setPlayback] = useState(true);
   const [, setQuality] = useState('');
   const composer = useRef<HTMLTextAreaElement>(null);
+  const attachment = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [input, setInput] = useState(''); const [output, setOutput] = useState('');
@@ -38,8 +42,8 @@ export default function App() {
     link: setLink, agent: setAgent,
     message: message => setMessages(current => {
       const index = current.findIndex(item => item.id === message.id);
-      if (index < 0) return [...current.slice(-199), message];
-      return current.map(item => item.id === message.id ? message : item);
+      if (index < 0) return [...current.slice(-199), { ...message, createdAt: Date.now() }];
+      return current.map(item => item.id === message.id ? { ...message, createdAt: item.createdAt } : item);
     }),
     text: (chunk, final) => lips.pushText(chunk, performance.now(), final),
     interrupt: () => lips.clear(), error: setError, playback: setPlayback, quality: setQuality,
@@ -69,11 +73,11 @@ export default function App() {
   const online = link === 'connected';
   const busy = link === 'connecting' || link === 'reconnecting';
   const title = link === 'connecting' ? 'Đang kết nối' : link === 'reconnecting' ? 'Đang nối lại' : stateLabels[agent];
-  async function connect() {
+  async function connect(enableMicrophone = mic) {
     if (link !== 'offline') { await client.disconnect(); return; }
     setError('');
     if (config?.auth_required && !access) { showSettings(true); setError('Nhập mã truy cập để bắt đầu phiên.'); return; }
-    await client.connect(access, mic, input);
+    await client.connect(access, enableMicrophone, input);
     setMic(client.microphoneEnabled());
     if (output) try { await client.device('audiooutput', output); } catch { setError('Trình duyệt chưa hỗ trợ đổi loa.'); }
   }
@@ -88,6 +92,24 @@ export default function App() {
     const next = !mic;
     try { if (online) await client.setMicrophone(next); setMic(next); }
     catch { setError('Không mở được micro. Kiểm tra quyền truy cập hoặc chọn thiết bị khác.'); }
+  }
+  async function speak() {
+    if (link === 'offline') await connect(true);
+    else if (online) await toggleMic();
+  }
+  async function insertAttachment(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]; event.target.value = '';
+    if (!file) return;
+    if (!/\.(txt|md)$/i.test(file.name)) { setError('Bạn chọn tệp văn bản .txt hoặc .md để chèn vào tin nhắn nhé.'); return; }
+    if (file.size > 16000) { setError('Tệp quá dài. Bạn chọn một đoạn văn bản ngắn để gửi nhé.'); return; }
+    try {
+      const content = (await file.text()).trim();
+      if (!content) { setError('Tệp này chưa có nội dung văn bản.'); return; }
+      const draft = composer.current?.value || '';
+      const next = `${draft ? draft + '\n\n' : ''}[${file.name}]\n${content}`;
+      if (next.length > 2000) { setError('Tin nhắn gồm nội dung tệp cần tối đa 2.000 ký tự. Bạn chọn đoạn ngắn hơn nhé.'); return; }
+      setError(''); setText(next); composer.current?.focus();
+    } catch { setError('Chưa đọc được tệp. Bạn có thể sao chép nội dung vào ô tin nhắn.'); }
   }
   function changeOption<K extends keyof PortraitOptions>(key: K, value: PortraitOptions[K]) { setOptions(current => ({ ...current, [key]: value })); }
   function useSuggestion(value: string) {
@@ -108,20 +130,57 @@ export default function App() {
           <Portrait client={client} lips={lips} options={options} />
         </div>
         <aside className="chat-panel" aria-labelledby="chat-title">
-          <div className="chat-header"><div className="chat-heading"><span className="assistant-icon"><Headphones size={23} strokeWidth={1.65} /></span><div><h2 id="chat-title">Trò chuyện cùng trợ lý</h2><p><span className={`small-dot ${online ? 'active' : ''}`} />{online || busy ? title : 'Sẵn sàng khi bạn cần'}</p></div></div><span className={`connection-badge ${online ? 'online' : ''}`}>{online ? 'Đã kết nối' : busy ? 'Đang kết nối' : 'Chưa kết nối'}</span></div>
+          <div className="chat-header">
+            <div className="chat-heading"><AssistantAvatar className="header-avatar" /><div>
+              <h2 id="chat-title">Hỗ trợ trực tuyến</h2>
+              <p><span className={`small-dot ${online ? 'active' : ''}`} />{online || busy ? title : 'Trợ lý đã sẵn sàng trò chuyện'}</p>
+            </div></div>
+            <button className={`connection-badge ${online ? 'online' : ''}`} onClick={() => void connect()}
+              disabled={!!config && !config.configured && link === 'offline'}
+              aria-label={online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}
+              title={online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}>
+              {busy ? <LoaderCircle className="spin" size={14} /> : online ? <span className="small-dot active" /> : <Phone size={14} />}
+              <span>{online ? 'Trực tuyến' : busy ? 'Đang kết nối' : 'Kết nối'}</span>
+              {online && <PhoneOff size={13} />}
+            </button>
+          </div>
           <div className="messages" ref={transcript} role="log" aria-label="Nội dung hội thoại">
-            {messages.length === 0 ? <div className="chat-welcome"><div className="welcome-illustration"><span className="welcome-ring" /><MessageCircle size={39} strokeWidth={1.5} /><span className="welcome-spark"><Sparkles size={16} /></span></div><span className="welcome-kicker">RẤT VUI ĐƯỢC GẶP BẠN</span><h3>Hôm nay bạn thế nào?</h3><p>Có chuyện muốn kể, câu hỏi muốn hỏi,<br />hay chỉ muốn trò chuyện một chút? Mình nghe đây.</p><div className="suggestions"><span>BẠN CÓ THỂ HỎI</span>{suggestions.map(value => <button key={value} disabled={sending} onClick={() => useSuggestion(value)}>{value}<ArrowUpRight size={15} /></button>)}</div></div> : <><div className="transcript-divider"><span>Nội dung cuộc trò chuyện</span></div>{messages.map(message => message.lookup ? <SearchReference key={message.id} lookup={message.lookup} /> : <article className={`message ${message.role}`} key={message.id}><span className="message-avatar" aria-hidden="true">{message.role === 'assistant' ? <Sparkles size={15} /> : 'B'}</span><div className="message-content"><span className="message-label">{message.role === 'assistant' ? 'Trợ lý' : 'Bạn'}{!message.final && message.role === 'user' && <span className="transcribing"> · Đang nhận giọng nói</span>}</span><p>{message.text}{!message.final && message.role === 'assistant' && <span className="typing-cursor" />}</p></div></article>)}</>}
-            {agent === 'thinking' && <div className="thinking"><i /><i /><i /><span>Trợ lý đang suy nghĩ…</span></div>}
+            {messages.length === 0 ? <article className="message assistant welcome-message">
+              <AssistantAvatar className="message-avatar" />
+              <div className="message-content"><p>Xin chào! <span aria-hidden="true">👋</span><br />Mình là trợ lý đồng hành của bạn.<br />Bạn muốn hỏi điều gì hay trò chuyện một chút? Mình nghe đây.</p><time dateTime={new Date(openedAt).toISOString()}>{timeFormatter.format(openedAt)}</time></div>
+            </article> : messages.map(message => message.lookup
+              ? <SearchReference key={message.id} lookup={message.lookup} />
+              : <article className={`message ${message.role}`} key={message.id}>
+                {message.role === 'assistant' ? <AssistantAvatar className="message-avatar" /> : <span className="user-avatar" aria-hidden="true"><UserRound size={20} /></span>}
+                <div className="message-content"><p>{message.text}{!message.final && message.role === 'assistant' && <span className="typing-cursor" />}</p>
+                  <div className="message-meta"><time dateTime={new Date(message.createdAt).toISOString()}>{timeFormatter.format(message.createdAt)}</time>{!message.final && message.role === 'user' && <span className="transcribing">Đang nhận giọng nói</span>}</div>
+                </div>
+              </article>)}
+            {!messages.some(message => message.role === 'user') && <SupportOptions onSelect={useSuggestion} disabled={sending} />}
+            {agent === 'thinking' && <div className="thinking"><i /><i /><i /><span>Mình đang nghĩ một chút…</span></div>}
           </div>
           <div className="chat-input-area">
             {!playback && online && <button className="playback-button" onClick={() => void client.playAudio().catch(() => setError('Chưa phát được âm thanh. Kiểm tra quyền phát tiếng.'))}><Volume2 size={16} /> Bấm để nghe câu trả lời</button>}
-            <form className="composer" onSubmit={event => { event.preventDefault(); void send(); }}><label className="sr-only" htmlFor="chat-input">Nội dung tin nhắn</label><textarea ref={composer} id="chat-input" value={text} onChange={event => setText(event.target.value)} placeholder="Kể mình nghe hoặc hỏi điều gì đó…" maxLength={2000} rows={2} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} /><div className="composer-bottom"><span><MessageCircle size={13} />{online ? 'Enter để gửi tin nhắn' : 'Kết nối để gửi tin nhắn'}</span><button type="submit" disabled={!online || !text.trim() || sending} aria-label="Gửi tin nhắn">{sending ? <LoaderCircle className="spin" size={17} /> : <Send size={17} />}</button></div></form>
-            <div className="call-controls"><button className={`connect-button ${online ? 'connected' : ''}`} onClick={() => void connect()} disabled={!!config && !config.configured && link === 'offline'}>{busy ? <LoaderCircle size={18} className="spin" /> : online ? <PhoneOff size={18} /> : <Phone size={18} />}<span>{online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}</span></button><button className={`mic-button ${mic ? '' : 'muted'}`} onClick={() => void toggleMic()} aria-label={mic ? 'Tắt microphone' : 'Bật microphone'} aria-pressed={mic}>{mic ? <Mic size={19} /> : <MicOff size={19} />}</button>{online && <button className="interrupt-button" disabled={agent !== 'speaking'} onClick={() => void client.interrupt().catch(() => setError('Chưa ngắt được lời. Thử nói qua micro.'))} aria-label="Ngắt lời trợ lý"><Square size={15} /></button>}</div>
-            <p className="input-hint"><AudioLines size={13} />{online ? mic ? 'Micro đang bật. Bạn có thể nói để ngắt lời trợ lý.' : 'Micro đang tắt. Bạn vẫn có thể gửi tin nhắn.' : 'Bật kết nối để trò chuyện bằng giọng nói hoặc tin nhắn.'}</p>
+            <form className="composer" onSubmit={event => { event.preventDefault(); void send(); }}>
+              <div className="composer-text"><label className="sr-only" htmlFor="chat-input">Nội dung tin nhắn</label>
+                <textarea ref={composer} id="chat-input" value={text} onChange={event => setText(event.target.value)} placeholder="Nhập nội dung bạn cần hỗ trợ…" maxLength={2000} rows={2}
+                  onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} />
+                <input ref={attachment} type="file" accept=".txt,.md,text/plain,text/markdown" className="sr-only" tabIndex={-1} aria-label="Chọn tệp văn bản" onChange={event => void insertAttachment(event)} />
+                <button type="button" className="attachment-button" onClick={() => attachment.current?.click()} aria-label="Chèn tệp văn bản" title="Chèn nội dung từ tệp .txt hoặc .md"><Paperclip size={23} /></button>
+              </div>
+              <button type="button" className={`mic-button ${online && mic ? 'listening' : ''} ${online && !mic ? 'muted' : ''}`} onClick={() => void speak()}
+                disabled={busy || (!!config && !config.configured && !online)}
+                aria-label={online ? mic ? 'Tắt microphone' : 'Bật microphone' : 'Bắt đầu nói chuyện'} aria-pressed={online && mic}>
+                {busy ? <LoaderCircle className="spin" size={26} /> : online && !mic ? <MicOff size={27} /> : <Mic size={29} strokeWidth={1.8} />}
+              </button>
+              <button type="submit" className="send-button" disabled={!online || !text.trim() || sending} aria-label="Gửi tin nhắn">{sending ? <LoaderCircle className="spin" size={24} /> : <Send size={26} strokeWidth={1.8} />}</button>
+            </form>
+            <div className="composer-help"><span>{online ? mic ? 'Bạn có thể nói để ngắt lời trợ lý.' : 'Micro đang tắt. Bạn vẫn có thể gửi tin nhắn.' : 'Kết nối để gửi tin nhắn'}</span>
+              {online && <button className="interrupt-button" disabled={agent !== 'speaking'} onClick={() => void client.interrupt().catch(() => setError('Chưa ngắt được lời. Thử nói qua micro.'))}><Square size={11} /> Ngắt lời</button>}
+            </div>
           </div>
         </aside>
       </section>
-      <footer className="app-footer"><button onClick={() => showSettings(true)}><Settings2 size={14} /> Thiết bị & chuyển động</button></footer>
     </main>
     {settings && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) showSettings(false); }}><section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="settings-title"><div><div className="eyebrow">CÁ NHÂN HÓA TRẢI NGHIỆM</div><h2 id="settings-title">Thiết bị & chuyển động</h2></div><button className="icon-button" onClick={() => showSettings(false)} aria-label="Đóng cài đặt"><X size={20} /></button></div>
       <label className="field">Mã truy cập ứng dụng<input type="password" value={access} onChange={event => setAccess(event.target.value)} placeholder={config?.auth_required ? 'Nhập mã do quản trị viên cung cấp' : 'Không bắt buộc trên localhost'} autoComplete="off" /></label><p className="field-note">Mã chỉ giữ trong bộ nhớ tab; khóa dịch vụ được cấu hình trên server.</p>

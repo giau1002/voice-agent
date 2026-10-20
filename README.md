@@ -47,8 +47,15 @@ Khung chat hiển thị lời nói đang nhận, câu trả lời và cho phép 
 các câu hỏi gợi ý giúp bắt đầu cuộc trò chuyện. Màn hình nhỏ chuyển thành bố cục
 dọc. Độ há hàm mặc định **120%**; điều chỉnh micro, loa và chuyển động tại nút
 cài đặt. Ảnh nhân vật không có chữ phủ hay nút chớp mắt; chớp mắt tự động vẫn
-hoạt động. Phần đầu khung trò chuyện có nền xanh với chữ và biểu tượng màu trắng.
+hoạt động. Phần đầu khung trò chuyện có nền xanh, chữ trắng và avatar tròn.
 Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
+
+Khung hỗ trợ có avatar tròn, bong bóng hội thoại, giờ gửi và bốn ô gợi ý. Các ô
+tra cứu hồ sơ hoặc đặt lịch mở câu hỏi hướng dẫn, không thực hiện tra cứu hồ sơ
+hay đặt lịch trực tiếp. Nút **Kết nối** ở đầu khung mở/đóng cuộc trò chuyện; nút
+micro trong thanh nhập có thể bắt đầu kết nối giọng nói. Nút kẹp giấy chèn nội
+dung tệp `.txt` / `.md` vào bản nháp để người dùng xem trước; tối đa 2.000 ký tự
+cho toàn bộ tin nhắn, chưa có chức năng tải lên PDF hoặc ảnh.
 
 ## Ngày giờ và thông tin thực tế
 
