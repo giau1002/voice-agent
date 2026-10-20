@@ -59,7 +59,7 @@ Ba terminal khác ở thư mục gốc:
 
 ```powershell
 # LiveKit local; khóa devkey/devsecret chỉ dành cho localhost
-.tools/livekit/livekit-server.exe --config deploy/livekit.local.yaml --bind 127.0.0.1 --node-ip 127.0.0.1
+.tools/livekit/livekit-server.exe --config deploy/livekit.local.yaml --bind 127.0.0.1
 
 uv run uvicorn voice_agent.api:app --host 127.0.0.1 --port 8790 --reload
 uv run python -m voice_agent.worker dev

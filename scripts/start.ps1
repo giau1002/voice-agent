@@ -12,7 +12,7 @@ try {
         $livekit = Join-Path $ProjectRoot '.tools/livekit/livekit-server.exe'
         if (-not (Test-Path -LiteralPath $livekit)) { throw 'Run setup or pass -CloudLiveKit' }
         $livekitConfig = Join-Path $ProjectRoot 'deploy/livekit.local.yaml'
-        $children += Start-Process -FilePath $livekit -ArgumentList @('--config',$livekitConfig,'--bind','127.0.0.1','--node-ip','127.0.0.1') -WindowStyle Hidden -PassThru -RedirectStandardOutput 'logs/livekit.out.log' -RedirectStandardError 'logs/livekit.err.log'
+        $children += Start-Process -FilePath $livekit -ArgumentList @('--config',$livekitConfig,'--bind','127.0.0.1') -WindowStyle Hidden -PassThru -RedirectStandardOutput 'logs/livekit.out.log' -RedirectStandardError 'logs/livekit.err.log'
     }
     $children += Start-Process -FilePath $python -ArgumentList @('-m','uvicorn','voice_agent.api:app','--host','127.0.0.1','--port','8790') -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput 'logs/api.out.log' -RedirectStandardError 'logs/api.err.log'
     $children += Start-Process -FilePath $python -ArgumentList @('-m','voice_agent.worker','start') -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput 'logs/worker.out.log' -RedirectStandardError 'logs/worker.err.log'

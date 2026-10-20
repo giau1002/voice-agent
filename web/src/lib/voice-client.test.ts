@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ rooms: [] as any[], connect: null as null | Promise<void>, fetch: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rooms: [] as any[], connect: null as null | Promise<void>, fetch: vi.fn(), failIce: false }));
 vi.mock('./audio-meter', () => ({ AudioMeter: class {
   unlock = vi.fn().mockResolvedValue(undefined); attach = vi.fn(); detach = vi.fn(); close = vi.fn(); sample() { return .4; }
 } }));
@@ -21,10 +21,16 @@ vi.mock('livekit-client', () => ({
     constructor() { mocks.rooms.push(this); }
     on(event: string, callback: (...args: any[]) => void) { this.handlers.set(event, callback); }
     registerTextStreamHandler(topic: string, callback: (...args: any[]) => void) { this.streams.set(topic, callback); }
-    connect() { return mocks.connect || Promise.resolve(); }
+    connect() {
+      if (mocks.failIce) {
+        this.handlers.get('Disconnected')?.();
+        return Promise.reject(new Error('could not establish pc connection'));
+      }
+      return mocks.connect || Promise.resolve();
+    }
   },
 }));
-import { VoiceClient, type ClientEvents } from './voice-client';
+import { VoiceClient, connectionError, type ClientEvents } from './voice-client';
 
 const session = { session_id: 'session', session_key: 'session-control', token: 'room-token', url: 'ws://localhost:7880', identity: 'user', room: 'room', max_seconds: 1800 };
 function events(): ClientEvents {
@@ -32,13 +38,28 @@ function events(): ClientEvents {
 }
 const flush = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
 beforeEach(() => {
-  mocks.rooms.length = 0; mocks.connect = null; mocks.fetch.mockReset();
+  mocks.rooms.length = 0; mocks.connect = null; mocks.failIce = false; mocks.fetch.mockReset();
   mocks.fetch.mockImplementation(async (_url: string, options?: RequestInit) => options?.method === 'DELETE'
     ? new Response(null, { status: 204 }) : new Response(JSON.stringify(session), { status: 200 }));
   vi.stubGlobal('fetch', mocks.fetch);
 });
 
 describe('voice transport lifecycle', () => {
+  it('preserves the ICE failure when SDK emits Disconnected before connect rejects', async () => {
+    mocks.failIce = true;
+    const callbacks = events(), client = new VoiceClient(callbacks);
+    await client.connect('', false, '');
+    expect(callbacks.error).toHaveBeenCalledTimes(1);
+    expect(callbacks.error).toHaveBeenCalledWith(expect.stringContaining('WebRTC (ICE)'));
+    expect(callbacks.link).toHaveBeenLastCalledWith('offline');
+    expect(mocks.fetch).toHaveBeenLastCalledWith('/api/sessions/session', expect.objectContaining({ method: 'DELETE' }));
+  });
+
+  it('distinguishes token rejection from a transport failure', () => {
+    expect(connectionError(new Error('401 Unauthorized'))).toContain('token');
+    expect(connectionError(new Error('custom error'))).toBe('custom error');
+  });
+
   it('connects mic, scopes chat to lk.chat and interrupts agent before sending', async () => {
     const callbacks = events(), client = new VoiceClient(callbacks);
     await client.connect('access', true, 'mic-1');

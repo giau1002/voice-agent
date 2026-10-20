@@ -40,6 +40,11 @@ không dùng nguyên cấu hình này cho LAN hoặc VPS. Cloud không cần pro
 
 ## Mạng và thiết bị
 
+- Windows native: giữ signaling ở `127.0.0.1:7880`, nhưng để LiveKit tự chọn
+  IP card mạng cho RTC. Không thêm `--node-ip 127.0.0.1`: UDP có thể đang bind
+  IP LAN, khiến candidate được gửi tới browser trỏ vào địa chỉ không có UDP listener.
+  Kiểm tra bằng `Get-NetUDPEndpoint -LocalPort 7882` và dòng `nodeIP` trong log.
+  Hai địa chỉ này cần tương ứng với đường truyền thực tế.
 - LiveKit Cloud: WSS/TLS và UDP/TURN theo cấu hình project.
 - LiveKit self-hosted: mở đúng signaling, RTC UDP/TCP và TURN theo tài liệu
   [self-hosting](https://docs.livekit.io/home/self-hosting/deployment/).

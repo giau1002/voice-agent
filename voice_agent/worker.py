@@ -36,6 +36,12 @@ async def entrypoint(ctx: JobContext):
     except TimeoutError:
         ctx.shutdown(reason="participant_timeout")
         return
+    except RuntimeError:
+        if not ctx.room.isconnected():
+            logger.info("Room closed before participant finished connecting")
+            ctx.shutdown(reason="participant_disconnected_during_connect")
+            return
+        raise
     session = AgentSession(
         stt=build_stt(settings), llm=build_llm(settings), tts=build_tts(settings),
         vad=build_vad(),

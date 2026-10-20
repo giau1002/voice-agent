@@ -20,6 +20,15 @@ export interface Session {
   room: string; identity: string; max_seconds: number;
 }
 
+export function connectionError(error: unknown): string {
+  const value = error instanceof Error ? error.message : String(error || '');
+  if (/pc connection|peerconnection|ice|connection timeout/i.test(value)) {
+    return 'Không thiết lập được đường truyền WebRTC (ICE). Kiểm tra địa chỉ RTC của LiveKit và cổng UDP 7882 / TCP 7881; không ép node-ip về 127.0.0.1.';
+  }
+  if (/401|unauthoriz|invalid token/i.test(value)) return 'LiveKit từ chối token. Kiểm tra API key/secret của server và worker.';
+  return value || 'Không kết nối được LiveKit.';
+}
+
 async function detailError(response: Response): Promise<Error> {
   try {
     const data = await response.json();
@@ -73,6 +82,7 @@ export class VoiceClient {
           deviceId: inputDevice || undefined },
       });
       this.room = room;
+      let joined = false;
       const current = () => generation === this.generation && this.room === room;
       room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
         if (current() && participant.isAgent && track.kind === Track.Kind.Audio) this.attachAudio(track, participant);
@@ -102,7 +112,9 @@ export class VoiceClient {
       room.on(RoomEvent.Reconnecting, () => { if (current()) { this.agentSpeaking = false; this.events.interrupt(); this.events.link('reconnecting'); } });
       room.on(RoomEvent.Reconnected, () => { if (current()) this.events.link('connected'); });
       room.on(RoomEvent.Disconnected, () => {
-        if (current()) { this.events.error('Phiên đã mất kết nối.'); void this.disconnect(); }
+        // connect() rejects with the real ICE/auth reason after emitting this
+        // event. Don't invalidate its generation before the catch can report it.
+        if (current() && joined) { this.events.error('Phiên đã mất kết nối. Kiểm tra LiveKit và đường truyền mạng.'); void this.disconnect(); }
       });
       room.on(RoomEvent.DataReceived, (data, participant, _kind, topic) => {
         if (!current() || !participant?.isAgent || topic !== 'portrait') return;
@@ -141,6 +153,7 @@ export class VoiceClient {
       });
       await room.connect(session.url, session.token);
       if (!current()) { await room.disconnect(); return; }
+      joined = true;
       await room.startAudio();
       if (microphone) {
         try { await room.localParticipant.setMicrophoneEnabled(true); }
@@ -158,7 +171,7 @@ export class VoiceClient {
       }, session.max_seconds * 1000);
     } catch (error) {
       if (generation !== this.generation) return;
-      this.events.error(error instanceof Error ? error.message : 'Không kết nối được LiveKit.');
+      this.events.error(connectionError(error));
       await this.disconnect();
     }
   }
