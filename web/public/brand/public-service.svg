@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="paper"><stop stop-color="#fffef4"/><stop offset="1" stop-color="#f5e8b8"/></radialGradient>
+    <g id="hand">
+      <path d="M61 23H94C102 23 107 28 107 36V48L90 60V42H60C54 42 50 38 50 33S54 23 61 23Z" fill="#b72620"/>
+      <path d="M61 29H88M60 34H88M61 39H88" stroke="#fff8e7" stroke-width="2.3" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <circle cx="80" cy="80" r="77" fill="url(#paper)"/>
+  <circle cx="80" cy="80" r="70" fill="none" stroke="#d6b86b" stroke-width="1"/>
+  <circle cx="80" cy="80" r="65" fill="none" stroke="#d6b86b" stroke-width="5" stroke-dasharray="1 5" opacity=".45"/>
+  <use href="#hand"/><use href="#hand" transform="rotate(72 80 80)"/>
+  <use href="#hand" transform="rotate(144 80 80)"/><use href="#hand" transform="rotate(216 80 80)"/>
+  <use href="#hand" transform="rotate(288 80 80)"/>
+</svg>
