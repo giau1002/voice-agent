@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LoaderCircle, Sparkles } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import type { VoiceClient } from '../lib/voice-client';
 import type { LipSync } from '../lib/lip-sync';
 
@@ -27,7 +27,7 @@ export function Portrait({ client, lips, options, onLevel }: {
         })));
         if (!alive || !canvas.current) return;
         const [photo, motionAtlas, flowAtlas, mouthAtlas, characterLayer] = loaded;
-        const assets = { motionAtlas, flowAtlas, mouthAtlas, characterLayer };
+        const assets = { motionAtlas, flowAtlas, mouthAtlas, characterLayer, transparentBackground: true };
         try { renderer = new window.PortraitRendering.PortraitRenderer(canvas.current, photo, assets); }
         catch {
           const old = canvas.current, next = old.cloneNode(true) as HTMLCanvasElement;
@@ -73,7 +73,6 @@ export function Portrait({ client, lips, options, onLevel }: {
 
   return <div className="portrait-wrap">
     <canvas ref={canvas} width={560} height={700} aria-label="Nhân vật trợ lý chuyển động theo giọng trả lời" />
-    <div className="portrait-badge"><Sparkles size={13} /> NHÂN VẬT TƯƠNG TÁC</div>
     <button className="blink-button" onClick={() => blinkRef.current?.trigger(performance.now())}>◡ Chớp mắt</button>
     {loading && <div className="portrait-cover"><LoaderCircle className="spin" />Đang chuẩn bị nhân vật</div>}
     {error && <div className="portrait-cover error" role="alert">{error}</div>}

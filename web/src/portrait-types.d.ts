@@ -30,7 +30,7 @@ interface Window {
   PortraitRendering: {
     PortraitRenderer: new (canvas: HTMLCanvasElement, portrait: HTMLImageElement, options: {
       motionAtlas: HTMLImageElement; flowAtlas: HTMLImageElement; mouthAtlas: HTMLImageElement;
-      characterLayer: HTMLImageElement; forceSoftware?: boolean;
+      characterLayer: HTMLImageElement; forceSoftware?: boolean; transparentBackground?: boolean;
     }) => RigRenderer;
   };
   PortraitGentleMotion: { GentleMotion: new () => GentleController };

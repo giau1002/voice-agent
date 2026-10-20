@@ -38,6 +38,13 @@ Có thể nhập tin nhắn khi không có micro. Nút **Ngắt lời** hoặc n
 để dừng câu trả lời hiện tại. Ctrl+C tại cửa sổ chạy script để dừng các tiến trình.
 Log nằm trong `logs/`, không được commit.
 
+Giao diện kiosk có banner đỏ, nền hoa văn trống đồng và nhân vật trên nền trong
+suốt. Các tab **Thủ tục phổ biến**, **Tìm kiếm**, **Mẫu đơn** cho phép chọn chủ đề
+để hỏi trợ lý; tìm kiếm hỗ trợ tiếng Việt không dấu và mã thủ tục. Danh mục mẫu
+ở `web/src/data/procedures.ts` lấy nhãn từ ảnh tham khảo, chưa kết nối cổng dịch vụ
+công hay kho mẫu đơn chính thức. Độ há hàm mặc định **120%**; điều chỉnh micro,
+loa và chuyển động tại nút cài đặt.
+
 LiveKit Cloud: đặt `LIVEKIT_URL=wss://...`, `LIVEKIT_API_KEY`,
 `LIVEKIT_API_SECRET` theo project của bạn, rồi chạy `scripts/start.ps1 -CloudLiveKit`.
 `LIVEKIT_SERVER_URL` chỉ dùng khi worker/API cần địa chỉ nội bộ khác với browser.

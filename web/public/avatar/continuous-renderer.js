@@ -31,6 +31,7 @@
     uniform float amounts[5];
     uniform vec4 characterPose;
     uniform float bodyY;
+    uniform bool transparentBackground;
     vec2 safeUV(vec2 p){return clamp(p,.5/size,1.-.5/size);}
     vec3 cell(sampler2D image,vec2 p,int index){return texture(image,(safeUV(p)+vec2(float(index%3),float(index/3)))/vec2(3.,2.)).rgb;}
     vec3 field(vec2 p,int index){vec3 f=cell(flows,p,index);return vec3((f.rg*255.-128.)*24./127./size,f.b);}
@@ -77,6 +78,10 @@
       return texture(photo,safeUV(q+offset)).rgb;
     }
     void main(){
+      if(transparentBackground){
+        vec2 p=inverseCharacter(uv*size);
+        pixel=vec4(clamp(portrait(p),0.,1.),texture(layer,safeUV(p)).b);return;
+      }
       if(dot(abs(characterPose),vec4(1.))+abs(bodyY)<.000001){pixel=vec4(clamp(portrait(uv),0.,1.),1.);return;}
       vec2 p=inverseCharacter(uv*size);
       float alpha=texture(layer,safeUV(p)).b,originalAlpha=texture(layer,safeUV(uv)).b;
@@ -91,12 +96,16 @@
     }`;
   // The same equations in JS provide a CPU fallback and frame-level QA.
   class SoftwareRig{
-    constructor(canvas,images,meta,createCanvas){
+    constructor(canvas,images,meta,createCanvas,transparentBackground=false){
       this.canvas=canvas;this.ctx=canvas.getContext('2d');this.meta=meta;
       this.images=images.map(image=>{const c=createCanvas(image.width,image.height),x=c.getContext('2d');x.drawImage(image,0,0);return{width:c.width,height:c.height,data:x.getImageData(0,0,c.width,c.height).data};});
       this.output=this.ctx.createImageData(canvas.width,canvas.height);
       [this.photo,this.color,this.flow,this.mouth,this.layer]=this.images;this.sampled=new Float64Array(3);this.f=new Float64Array(3);this.temp=new Float64Array(3);this.animated=this.ctx.createImageData(canvas.width,canvas.height);
       this.ctx.drawImage(images[0],0,0,canvas.width,canvas.height);this.original=this.ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      this.transparentBackground=transparentBackground&&!!this.layer;
+      if(this.transparentBackground)for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){
+        this.sample(this.layer,(x+.5)/canvas.width,(y+.5)/canvas.height,this.sampled);this.original[(y*canvas.width+x)*4+3]=Math.round(this.sampled[2]);
+      }
       if(this.layer){const {width:w,height:h}=canvas,m=this.meta;this.motionRows=[];
         const margin=Math.ceil(16/m.width*w);
         for(let y=0;y<h;y++){let lo=w,hi=0;const sy=Math.floor((y+.5)/h*m.height);for(let yy=Math.max(0,sy-10);yy<=Math.min(m.height-1,sy+10);yy++)for(let xx=0;xx<m.width;xx++)if(this.layer.data[(yy*m.width+xx)*4+2]>0){lo=Math.min(lo,Math.floor(xx/m.width*w)-margin);hi=Math.max(hi,Math.ceil((xx+1)/m.width*w)+margin);}this.motionRows.push([Math.max(0,lo),Math.min(w,hi)]);}
@@ -130,7 +139,7 @@
             red+=mask*(this.temp[0]*(1-mix)+this.sampled[0]*mix-red);green+=mask*(this.temp[1]*(1-mix)+this.sampled[1]*mix-green);blue+=mask*(this.temp[2]*(1-mix)+this.sampled[2]*mix-blue);
           }
         }
-        const k=(y*w+x)*4;out[k]=clamp(red,0,255);out[k+1]=clamp(green,0,255);out[k+2]=clamp(blue,0,255);out[k+3]=255;
+        const k=(y*w+x)*4;out[k]=clamp(red,0,255);out[k+1]=clamp(green,0,255);out[k+2]=clamp(blue,0,255);
       }
       const pose=characterPose(motion);
       if(this.layer&&pose.some(v=>Math.abs(v)>.000001)){
@@ -141,6 +150,7 @@
         for(let y=0;y<h;y++)for(let x=this.motionRows[y][0];x<this.motionRows[y][1];x++){
           const u=(x+.5)/w,v=(y+.5)/h,k=(y*w+x)*4,p=inverseCharacter(u*m.width,v*m.height,pose,trig),pu=p[0]/m.width,pv=p[1]/m.height;
           this.sample(this.layer,pu,pv,sample);const alpha=sample[2]/255;this.sample(this.layer,u,v,sample);if(alpha<.00001&&sample[2]<.00255)continue;
+          if(this.transparentBackground){this.sample(source,pu,pv,sample);for(let c=0;c<3;c++)animated[k+c]=sample[c];animated[k+3]=Math.round(alpha*255);continue;}
           if(alpha>=.99999){this.sample(source,pu,pv,sample);for(let c=0;c<3;c++)animated[k+c]=sample[c];continue;}
           background(u,v,base);
           if(alpha>.00001){background(pu,pv,bg);this.sample(source,pu,pv,sample);for(let c=0;c<3;c++)animated[k+c]=clamp((1-alpha)*base[c]+sample[c]-(1-alpha)*bg[c],0,255);}
@@ -151,18 +161,19 @@
     }
   }
   class PortraitRenderer{
-    constructor(canvas,portrait,{motionAtlas,flowAtlas,mouthAtlas,characterLayer,metadata=root.PortraitRig,createCanvas,forceSoftware=false}={}){
+    constructor(canvas,portrait,{motionAtlas,flowAtlas,mouthAtlas,characterLayer,metadata=root.PortraitRig,createCanvas,forceSoftware=false,transparentBackground=false}={}){
       if(!metadata?.mouth_sequence||!motionAtlas||!flowAtlas||!mouthAtlas)throw Error('Thiếu dữ liệu chuyển động nhân vật.');
       this.canvas=canvas;this.meta=metadata;this.lastKey='';this.createCanvas=createCanvas||((w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;});
-      let gl=null;try{if(!forceSoftware)gl=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,preserveDrawingBuffer:false});}catch{}
+      let gl=null;try{if(!forceSoftware)gl=canvas.getContext('webgl2',{alpha:transparentBackground&&!!characterLayer,premultipliedAlpha:false,antialias:false,depth:false,preserveDrawingBuffer:false});}catch{}
       this.gl=gl;this.engine=gl?'webgl2':'software';
-      if(!gl){if(!forceSoftware){canvas.width=280;canvas.height=350;}this.software=new SoftwareRig(canvas,[portrait,motionAtlas,flowAtlas,mouthAtlas,...(characterLayer?[characterLayer]:[])],metadata,this.createCanvas);return;}
+      if(!gl){if(!forceSoftware){canvas.width=280;canvas.height=350;}this.software=new SoftwareRig(canvas,[portrait,motionAtlas,flowAtlas,mouthAtlas,...(characterLayer?[characterLayer]:[])],metadata,this.createCanvas,transparentBackground);return;}
       const compile=(type,code)=>{const shader=gl.createShader(type);gl.shaderSource(shader,code);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader;};
       const program=gl.createProgram();gl.attachShader(program,compile(gl.VERTEX_SHADER,vertex));gl.attachShader(program,compile(gl.FRAGMENT_SHADER,fragment));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);this.program=program;
       const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
       const position=gl.getAttribLocation(program,'position');gl.enableVertexAttribArray(position);gl.vertexAttribPointer(position,2,gl.FLOAT,false,0,0);
       [portrait,motionAtlas,flowAtlas,mouthAtlas,characterLayer||portrait].forEach((image,index)=>{const texture=gl.createTexture();gl.activeTexture(gl.TEXTURE0+index);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL,gl.NONE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGB,gl.RGB,gl.UNSIGNED_BYTE,image);gl.uniform1i(gl.getUniformLocation(program,['photo','colors','flows','mouths','layer'][index]),index);});
       this.hasCharacterLayer=!!characterLayer;this.characterPose=gl.getUniformLocation(program,'characterPose');this.bodyY=gl.getUniformLocation(program,'bodyY');
+      gl.uniform1i(gl.getUniformLocation(program,'transparentBackground'),transparentBackground&&!!characterLayer?1:0);
       this.amounts=gl.getUniformLocation(program,'amounts[0]');gl.uniform2f(gl.getUniformLocation(program,'size'),metadata.width,metadata.height);gl.uniform2f(gl.getUniformLocation(program,'center'),(metadata.eyes[0][0]+metadata.eyes[1][0])/2,(metadata.eyes[0][1]+metadata.eyes[1][1])/2);
       gl.uniform2f(gl.getUniformLocation(program,'mouthCenter'),...metadata.mouth);gl.uniform4f(gl.getUniformLocation(program,'mouthRect'),...metadata.mouth_sequence.rect);
       canvas.addEventListener?.('webglcontextlost',event=>{event.preventDefault();this.lost=true;});canvas.addEventListener?.('webglcontextrestored',()=>location.reload());

@@ -33,3 +33,31 @@ it('opens hardware and portrait settings, changes motion, and keeps API keys out
   fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+
+it('finds procedures without accents, supports clear, and drafts a question before connection', async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Tìm kiếm' }));
+  const search = screen.getByLabelText('Tìm thủ tục');
+  fireEvent.change(search, { target: { value: 'dang ky ket hon' } });
+  expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: /Thủ tục đăng ký kết hôn/ }));
+  expect((screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement).value).toContain('Thủ tục đăng ký kết hôn');
+  expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled();
+  fireEvent.change(search, { target: { value: 'khong co ket qua' } });
+  expect(screen.getByText('Chưa tìm thấy thủ tục')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Xóa tìm kiếm'));
+  expect(search).toHaveValue('');
+  expect(screen.queryByText('Chưa tìm thấy thủ tục')).not.toBeInTheDocument();
+});
+
+it('uses the forms tab to draft a form question and preserves it when collapsing chat', async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Mẫu đơn' }));
+  fireEvent.click(screen.getByRole('button', { name: /Thủ tục đăng ký kết hôn/ }));
+  const message = screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement;
+  expect(message.value).toContain('mẫu đơn');
+  const toggle = screen.getByRole('button', { name: 'NỘI DUNG TRÒ CHUYỆN' });
+  fireEvent.click(toggle); expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(toggle); expect(message).toBeVisible();
+  expect(message.value).toContain('mẫu đơn');
+});
