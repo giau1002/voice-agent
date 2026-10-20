@@ -2,12 +2,15 @@
 import asyncio
 import json
 import logging
+from dataclasses import asdict
 
 from livekit import agents, rtc
-from livekit.agents import Agent, AgentSession, JobContext, room_io
+from livekit.agents import AgentSession, JobContext, room_io
 
+from .assistant import PortraitAgent
 from .config import get_settings
 from .providers import build_llm, build_stt, build_tts, build_vad
+from .web_search import SearchResult
 
 logger = logging.getLogger("portrait-voice")
 settings = get_settings()
@@ -15,12 +18,6 @@ server = agents.AgentServer(
     num_idle_processes=1, ws_url=settings.internal_livekit_url, api_key=settings.livekit_api_key,
     api_secret=settings.livekit_api_secret.get_secret_value(),
 )
-
-
-class PortraitAgent(Agent):
-    async def on_enter(self) -> None:
-        if settings.agent_greeting:
-            self.session.say(settings.agent_greeting, allow_interruptions=True)
 
 
 @server.rtc_session(agent_name=settings.livekit_agent_name)
@@ -113,8 +110,16 @@ async def entrypoint(ctx: JobContext):
         await session.aclose()
 
     ctx.add_shutdown_callback(cleanup)
+
+    async def publish_search(result: SearchResult):
+        # Text streams handle the provider's HTML/source payload without the small
+        # data-packet limit. Only this room's agent can produce frontend references.
+        await ctx.room.local_participant.send_text(
+            json.dumps(asdict(result), ensure_ascii=False), topic="portrait.sources",
+        )
+
     await session.start(
-        agent=PortraitAgent(instructions=settings.prompt()), room=ctx.room,
+        agent=PortraitAgent(settings, publish_search), room=ctx.room,
         room_options=room_io.RoomOptions(
             participant_identity=participant.identity,
             text_input=room_io.TextInputOptions(text_input_cb=on_text),

@@ -125,4 +125,23 @@ describe('voice transport lifecycle', () => {
     expect(client.speaking).toBe(false); expect(callbacks.interrupt).toHaveBeenCalled();
     await client.disconnect();
   });
+
+  it('accepts source streams only from the current agent and keeps them out of lip sync', async () => {
+    const callbacks = events(), client = new VoiceClient(callbacks);
+    await client.connect('', false, '');
+    const room = mocks.rooms[0], handler = room.streams.get('portrait.sources');
+    const payload = JSON.stringify({ status: 'ok', query: 'Câu hỏi', answer: 'Đã kiểm tra.',
+      sources: [{ title: 'Nguồn', url: 'https://example.vn' }], suggestions_html: '', checked_at: '2026-10-20T19:00:00+07:00' });
+    const reader = () => ({ info: { id: 'lookup-1' }, async *[Symbol.asyncIterator]() { yield payload; } });
+    handler(reader(), { identity: 'user' }); await flush();
+    expect(callbacks.message).not.toHaveBeenCalled();
+    handler(reader(), { identity: 'agent' }); await flush();
+    expect(callbacks.message).toHaveBeenCalledWith(expect.objectContaining({ id: 'lookup:lookup-1',
+      lookup: expect.objectContaining({ query: 'Câu hỏi' }) }));
+    expect(callbacks.text).not.toHaveBeenCalled();
+    callbacks.message = vi.fn();
+    await client.disconnect();
+    handler(reader(), { identity: 'agent' }); await flush();
+    expect(callbacks.message).not.toHaveBeenCalled();
+  });
 });

@@ -105,6 +105,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "language": settings.soniox_tts_language,
             "session_max_seconds": settings.session_max_seconds,
             "lip_sync": "audio + synchronized text; phonemes estimated",
+            "timezone": settings.agent_timezone,
+            "web_search": settings.can_search_web,
         }
 
     @app.post("/api/sessions", dependencies=[Depends(authorize)])

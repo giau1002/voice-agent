@@ -1,9 +1,10 @@
 import { Room, RoomEvent, Track, type RemoteParticipant, type Participant, type RemoteTrack } from 'livekit-client';
 import { AudioMeter } from './audio-meter';
+import { parseWebLookup, type WebLookup } from './web-search';
 
 export type AgentState = 'idle' | 'initializing' | 'listening' | 'thinking' | 'speaking';
 export type LinkState = 'offline' | 'connecting' | 'connected' | 'reconnecting';
-export interface Message { id: string; role: 'assistant' | 'user'; text: string; final: boolean }
+export interface Message { id: string; role: 'assistant' | 'user'; text: string; final: boolean; lookup?: WebLookup }
 export interface ClientEvents {
   link: (state: LinkState) => void;
   agent: (state: AgentState) => void;
@@ -149,6 +150,23 @@ export class VoiceClient {
               final: role === 'assistant' || reader.info.attributes?.['lk.transcription_final'] === 'true' });
             if (role === 'assistant') this.events.text('', true);
           } catch { if (current()) this.events.error('Một đoạn phụ đề đã bị gián đoạn.'); }
+        })();
+      });
+      room.registerTextStreamHandler('portrait.sources', (reader, info) => {
+        if (!current() || !room.remoteParticipants.get(info.identity)?.isAgent) return;
+        void (async () => {
+          try {
+            let payload = '';
+            for await (const chunk of reader) {
+              if (!current()) return;
+              payload += chunk;
+              if (payload.length > 150000) return;
+            }
+            if (!current()) return;
+            const lookup = parseWebLookup(JSON.parse(payload));
+            if (lookup) this.events.message({ id: 'lookup:' + reader.info.id,
+              role: 'assistant', text: lookup.answer, final: true, lookup });
+          } catch { /* Ignore malformed or interrupted source envelopes. */ }
         })();
       });
       await room.connect(session.url, session.token);

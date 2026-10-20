@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -42,9 +43,16 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(0.4, ge=0, le=2)
     agent_prompt_file: str = "prompts/system.md"
     agent_greeting: str = "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?"
+    agent_timezone: str = "Asia/Ho_Chi_Minh"
+    web_search_enabled: bool = True
+    web_search_model: str = "gemini-2.5-flash"
 
     @model_validator(mode="after")
     def validate_runtime(self):
+        try:
+            ZoneInfo(self.agent_timezone)
+        except ZoneInfoNotFoundError as error:
+            raise ValueError("AGENT_TIMEZONE must be a valid IANA time zone") from error
         if not self.livekit_url.startswith(("ws://", "wss://")):
             raise ValueError("LIVEKIT_URL must use ws:// or wss://")
         if self.llm_provider == "local" and not self.llm_base_url:
@@ -82,6 +90,10 @@ class Settings(BaseSettings):
 
     def prompt(self) -> str:
         return (ROOT / self.agent_prompt_file).read_text(encoding="utf-8")
+
+    @property
+    def can_search_web(self) -> bool:
+        return self.web_search_enabled and bool(self.gemini_api_key.get_secret_value())
 
 
 @lru_cache

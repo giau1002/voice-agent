@@ -44,6 +44,26 @@ các câu hỏi gợi ý giúp bắt đầu cuộc trò chuyện. Màn hình nh�
 dọc. Độ há hàm mặc định **120%**; điều chỉnh micro, loa và chuyển động tại nút
 cài đặt. Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
 
+## Ngày giờ và thông tin thực tế
+
+Mỗi yêu cầu tới LLM (giọng nói, nhập chữ hoặc sau khi gọi công cụ) đều nhận ngày,
+thứ, giờ mới từ đồng hồ server theo `AGENT_TIMEZONE=Asia/Ho_Chi_Minh`. Không cố
+định ngày vào prompt; qua nửa đêm trợ lý tự nhận ngữ cảnh ngày mới. Máy chủ cần
+đồng bộ giờ hệ thống chính xác. Dependency `tzdata` hỗ trợ múi giờ trên Windows.
+
+`WEB_SEARCH_ENABLED=true` bật công cụ tra cứu theo yêu cầu bằng Gemini + Google
+Search, sử dụng `GEMINI_API_KEY` hiện có và `WEB_SEARCH_MODEL=gemini-2.5-flash`.
+Công cụ dùng được cả khi LLM chính là Gemini, OpenAI hoặc local. Tin mới, thời
+tiết, giá cả, người đương nhiệm và quy định hiện hành cần tra cứu; hỏi ngày giờ
+hoặc trò chuyện thông thường không cần gọi web. Search có thể phát sinh phí theo
+tài khoản Gemini và mất thêm thời gian khi truy vấn.
+
+Khung chat hiển thị nguồn và gợi ý tìm kiếm do nhà cung cấp trả về. Chỉ kết quả có
+grounding metadata và nguồn thực mới được xác nhận; lỗi tra cứu trả trạng thái
+không xác minh được, không dùng lại câu trả lời phỏng đoán. Nguồn web không thay
+thế việc tích hợp dữ liệu hồ sơ hoặc cơ sở dữ liệu nghiệp vụ. Khi chưa có key hoặc
+tắt tìm kiếm, trợ lý nhận đúng trạng thái không có web trong ngữ cảnh.
+
 LiveKit Cloud: đặt `LIVEKIT_URL=wss://...`, `LIVEKIT_API_KEY`,
 `LIVEKIT_API_SECRET` theo project của bạn, rồi chạy `scripts/start.ps1 -CloudLiveKit`.
 `LIVEKIT_SERVER_URL` chỉ dùng khi worker/API cần địa chỉ nội bộ khác với browser.
