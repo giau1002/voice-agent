@@ -1,0 +1,46 @@
+{
+  "width": 560,
+  "height": 700,
+  "mouth": [
+    0.5076507023402623,
+    0.28525634765625
+  ],
+  "eyes": [
+    [
+      0.4605129241943359,
+      0.2152002171107701
+    ],
+    [
+      0.5516009194510324,
+      0.2132688467843192
+    ]
+  ],
+  "mouth_width": 0.08480980055672782,
+  "names": [
+    "neutral",
+    "AA",
+    "EE",
+    "OO",
+    "smile",
+    "blink"
+  ],
+  "method": "ordered jaw articulation with independently calibrated upper and lower lip motion",
+  "flow_range": 24,
+  "colors_columns": 3,
+  "colors_rows": 2,
+  "flow_columns": 3,
+  "flow_rows": 2,
+  "mouth_sequence": {
+    "count": 11,
+    "columns": 4,
+    "rows": 3,
+    "rect": [
+      220,
+      152,
+      128,
+      96
+    ],
+    "max_open_ratio": 0.3,
+    "jaw_balanced": true
+  }
+}

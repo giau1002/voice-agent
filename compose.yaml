@@ -1,0 +1,32 @@
+services:
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    profiles: [local]
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./deploy/livekit.local.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "127.0.0.1:7880:7880"
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:7882:7882/udp"
+    restart: unless-stopped
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    env_file: .env
+    ports: ["127.0.0.1:8790:8790"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8790/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    env_file: .env
+    command: ["uv", "run", "--frozen", "--no-dev", "python", "-m", "voice_agent.worker", "start"]
+    restart: unless-stopped
+    stop_grace_period: 60s
