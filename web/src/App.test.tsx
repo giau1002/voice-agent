@@ -35,7 +35,7 @@ it('opens hardware and portrait settings, changes motion, and keeps API keys out
   const motion = screen.getByLabelText('Cử động đầu khi nói');
   expect(motion).toBeChecked(); fireEvent.click(motion); expect(motion).not.toBeChecked();
   expect(screen.getByLabelText('Microphone')).toBeInTheDocument();
-  expect(screen.getByRole('slider', { name: /Độ há hàm/ })).toHaveValue('1.2');
+  expect(screen.getByRole('slider', { name: /Độ há hàm/ })).toHaveValue('1.5');
   expect(screen.queryByLabelText('SONIOX_API_KEY')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

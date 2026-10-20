@@ -28,16 +28,22 @@ export class LipSync {
 
   sample(now: number, level: number, speaking: boolean): MouthSample {
     const core = window.PortraitCore;
+    if (!speaking) { this.heardAt = -Infinity; return { weights: core.pose('rest'), articulation: 1 }; }
     if (level > .015) this.heardAt = now;
     // Retain a short release for natural closures; no random silent lip motion.
-    const audible = speaking && now - this.heardAt < 130;
+    const audible = now - this.heardAt < 130;
     if (!audible) return { weights: core.pose('rest'), articulation: 1 };
     if (this.pending && now - this.lastTextAt > 180) this.pushText('', now, true);
     let sample = this.planner?.sample(now);
     if (!sample || sample.weights.rest > .98) {
-      sample = { weights: core.blend(core.pose('rest'), core.pose('AA'), .65), articulation: .85 };
+      sample = { weights: core.blend(core.pose('rest'), core.pose('AA'), .82), articulation: .95 };
     }
-    const energy = Math.min(1, Math.max(.28, level * 4));
+    // Speech RMS is usually well below full scale. Linear gain kept quiet TTS
+    // near the closed end of the jaw atlas even with the old 120% setting.
+    // Compress dynamics while audible, preserving the text's closed MBP poses.
+    const intensity = Math.min(1, Math.max(.62, Math.sqrt(Math.max(0, level)) * 2.3));
+    const release = Math.min(1, Math.max(0, (now - this.heardAt - 35) / 95));
+    const energy = intensity * (1 - release * release * (3 - 2 * release));
     return { weights: core.blend(core.pose('rest'), sample.weights, energy), articulation: sample.articulation ?? 1 };
   }
 }

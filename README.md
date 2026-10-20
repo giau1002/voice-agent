@@ -45,7 +45,7 @@ Log nằm trong `logs/`, không được commit.
 Giao diện xanh–trắng đặt nhân vật cùng nền ảnh gốc bên trái và chatbot bên phải.
 Khung chat hiển thị lời nói đang nhận, câu trả lời và cho phép nhập tin nhắn;
 các câu hỏi gợi ý giúp bắt đầu cuộc trò chuyện. Màn hình nhỏ chuyển thành bố cục
-dọc. Độ há hàm mặc định **120%**; điều chỉnh micro, loa và chuyển động tại nút
+dọc. Độ há hàm mặc định **150%**, có thể chỉnh tới **180%**; điều chỉnh micro, loa và chuyển động tại nút
 cài đặt. Ảnh nhân vật không có chữ phủ hay nút chớp mắt; chớp mắt tự động vẫn
 hoạt động. Phần đầu khung trò chuyện có nền xanh, chữ trắng và avatar tròn.
 Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
@@ -139,6 +139,10 @@ flowchart LR
 Giao diện giữ bộ ảnh/khẩu hình V13 đã hiệu chỉnh: 11 mức mở hàm, phối hợp các
 dáng A/E/I/O/U/M/B/P/F/V và mỉm cười. Mắt chớp mỗi 2–3 giây, đầu nghiêng nhẹ
 khi có lời nói thực tế. Trong Cài đặt có mức cử động đầu, độ há hàm và độ trễ môi.
+Độ nhạy khẩu hình được hiệu chỉnh cho tiếng TTS nhỏ: nguyên âm mở rõ hơn, phụ
+âm khép môi vẫn khép, khoảng im tiếng có nhịp nhả mềm. Mức há hàm chọn trên các
+khẩu hình đã hiệu chỉnh, không kéo giãn cả khuôn mặt; không đổi tốc độ đọc hay
+nhịp ước lượng từ chỉ để làm miệng mở lớn.
 
 Web Audio phân tích **remote track của agent**, không phân tích micro người dùng
 để nhép miệng avatar. Môi chỉ cử động khi agent đang nói và audio nhận được có

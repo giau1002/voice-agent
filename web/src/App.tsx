@@ -34,7 +34,7 @@ export default function App() {
   const [input, setInput] = useState(''); const [output, setOutput] = useState('');
   const [options, setOptions] = useState<PortraitOptions>({
     motion: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
-    intensity: 1, jaw: 1.2, delay: 60,
+    intensity: 1, jaw: 1.5, delay: 60,
   });
   const transcript = useRef<HTMLDivElement>(null);
   const [lips] = useState(() => new LipSync());
@@ -188,7 +188,7 @@ export default function App() {
       <label className="field">Loa / tai nghe<select value={output} onChange={event => { const id = event.target.value; setOutput(id); void client.device('audiooutput', id).catch(() => setError('Trình duyệt chưa hỗ trợ đổi loa.')); }}><option value="">Thiết bị mặc định</option>{devices.filter(device => device.kind === 'audiooutput').map((device, i) => <option key={device.deviceId || i} value={device.deviceId}>{device.label || `Loa ${i + 1}`}</option>)}</select></label>
       <div className="setting-switch"><div><strong>Cử động đầu khi nói</strong><p>Nghiêng nhẹ, có khoảng nghỉ giữa các nhịp</p></div><input type="checkbox" checked={options.motion} onChange={event => changeOption('motion', event.target.checked)} aria-label="Cử động đầu khi nói" /></div>
       <label className="range-field"><span>Mức cử động đầu <output>{Math.round(options.intensity * 100)}%</output></span><input aria-label="Mức cử động đầu" type="range" min="0.5" max="1.4" step="0.1" value={options.intensity} onChange={event => changeOption('intensity', Number(event.target.value))} /></label>
-      <label className="range-field"><span>Độ há hàm <output>{Math.round(options.jaw * 100)}%</output></span><input aria-label="Độ há hàm" type="range" min="0.6" max="1.2" step="0.05" value={options.jaw} onChange={event => changeOption('jaw', Number(event.target.value))} /></label>
+      <label className="range-field"><span>Độ há hàm <output>{Math.round(options.jaw * 100)}%</output></span><input aria-label="Độ há hàm" type="range" min="0.6" max="1.8" step="0.05" value={options.jaw} onChange={event => changeOption('jaw', Number(event.target.value))} /></label>
       <label className="range-field"><span>Độ trễ môi <output>{options.delay} ms</output></span><input aria-label="Độ trễ môi" type="range" min="0" max="200" step="10" value={options.delay} onChange={event => changeOption('delay', Number(event.target.value))} /></label><p className="field-note">Miệng đi trước tiếng: tăng độ trễ. Khẩu hình trong từ vẫn là ước lượng, được điều tiết theo âm thanh đang phát.</p>
       <button className="save-settings" onClick={() => showSettings(false)}><Check size={17} /> Xong</button>
     </section></div>}

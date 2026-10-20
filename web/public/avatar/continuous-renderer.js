@@ -14,10 +14,12 @@
     return[px,py];
   }
   // Continuous controls, without dominant-pose selection or frame swapping.
-  function controls(w,blink){
-    const opening=.95*clamp((w.AA||0)+(w.EE||0)*.38+(w.OH||0)*.72+(w.OO||0)*.48+(w.FV||0)*.22+(w.TDL||0)*.45+(w.smile||0)*.2);
+  function controls(w,blink,motion={}){
+    const opening=.95*clamp((w.AA||0)+(w.EE||0)*.50+(w.OH||0)*.78+(w.OO||0)*.58+(w.FV||0)*.22+(w.TDL||0)*.45+(w.smile||0)*.2);
     const width=clamp((w.EE||0)*.025-(w.OH||0)*.025-(w.OO||0)*.035+(w.smile||0)*.015,-.035,.025);
-    return[opening,width,clamp(w.smile||0)*.7,0,clamp(blink)];
+    // The multiplier selects a deeper calibrated jaw pose; it never stretches
+    // the face or samples beyond the final mouth/teeth frame.
+    return[clamp(opening*clamp(motion.jawDepth??1,.6,1.8)*clamp(motion.articulation??1)),width,clamp(w.smile||0)*.7,0,clamp(blink)];
   }
   const vertex=`#version 300 es
     in vec2 position;out vec2 uv;
@@ -179,8 +181,7 @@
       canvas.addEventListener?.('webglcontextlost',event=>{event.preventDefault();this.lost=true;});canvas.addEventListener?.('webglcontextrestored',()=>location.reload());
     }
     render(weights={rest:1},blink=0,debug=false,force=false,motion={}){
-      if(typeof weights==='number')weights={rest:1-weights,AA:weights};const values=controls(weights,blink);
-      values[0]=clamp(values[0]*(motion.jawDepth??1)*(motion.articulation??1));
+      if(typeof weights==='number')weights={rest:1-weights,AA:weights};const values=controls(weights,blink,motion);
       const pose=this.hasCharacterLayer||this.software?.layer?characterPose(motion):[0,0,0,0,0];
       const key=[...values,...pose].map(v=>v.toFixed(5)).join('|');
       if(this.lost||!force&&key===this.lastKey)return;this.lastKey=key;if(this.software){this.software.render(values,motion);return;}
