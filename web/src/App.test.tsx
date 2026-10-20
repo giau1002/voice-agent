@@ -47,7 +47,7 @@ it('places the composer in the chatbot and drafts a suggestion before connection
   expect(within(chat).getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
   expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /^Tra cứu hồ sơ/ }));
-  expect((screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement).value).toContain('hướng dẫn mình cách tra cứu');
+  expect((screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement).value).toContain('hướng dẫn cách tra cứu');
   expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveFocus();
   expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled();
   expect(mocks.sendText).not.toHaveBeenCalled();

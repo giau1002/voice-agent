@@ -2,18 +2,18 @@ import { CalendarDays, ChevronRight, FileText, FolderClosed, MessageSquareMore }
 
 const options = [
   { title: 'Tra cứu hồ sơ', description: 'Tìm cách kiểm tra tình trạng hồ sơ', color: 'blue', icon: FolderClosed,
-    question: 'Bạn hướng dẫn mình cách tra cứu tình trạng hồ sơ nhé. Nếu cần tra cứu trực tiếp, hãy chỉ mình kênh chính thức.' },
+    question: 'Tôi muốn được hướng dẫn cách tra cứu tình trạng hồ sơ và kênh tra cứu chính thức.' },
   { title: 'Hướng dẫn thủ tục', description: 'Tư vấn quy trình, thành phần hồ sơ', color: 'green', icon: FileText,
-    question: 'Mình muốn tìm hiểu một thủ tục hành chính. Bạn hỏi mình cần làm thủ tục nào rồi cùng hướng dẫn từng bước nhé.' },
+    question: 'Tôi cần được hướng dẫn thực hiện một thủ tục hành chính.' },
   { title: 'Đặt lịch hỗ trợ', description: 'Hướng dẫn đăng ký lịch hẹn', color: 'purple', icon: CalendarDays,
-    question: 'Bạn hướng dẫn mình cách đặt lịch hỗ trợ tại trung tâm nhé. Hãy hỏi mình địa điểm cần đến để tìm kênh liên hệ chính thức.' },
+    question: 'Tôi muốn tìm hiểu cách đặt lịch hỗ trợ và kênh liên hệ chính thức của trung tâm.' },
   { title: 'Hỏi về hồ sơ', description: 'Các vấn đề khác liên quan', color: 'orange', icon: MessageSquareMore,
-    question: 'Mình có thắc mắc về hồ sơ, bạn cùng mình tìm hiểu nhé.' },
+    question: 'Tôi có thắc mắc về hồ sơ cần được giải đáp.' },
 ];
 
 export function SupportOptions({ onSelect, disabled }: { onSelect: (text: string) => void; disabled: boolean }) {
   return <section className="support-options" aria-labelledby="support-options-title">
-    <h3 id="support-options-title">Bạn có thể chọn nội dung cần hỗ trợ:</h3>
+    <h3 id="support-options-title">Anh/chị có thể chọn nội dung cần hỗ trợ:</h3>
     <div className="support-grid">{options.map(({ title, description, color, icon: Icon, question }) =>
       <button key={title} className={`support-option ${color}`} onClick={() => onSelect(question)} disabled={disabled}>
         <span className="support-option-icon"><Icon size={25} strokeWidth={1.8} /></span>
