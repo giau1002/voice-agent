@@ -147,7 +147,7 @@ export default function App() {
           <div className="messages" ref={transcript} role="log" aria-label="Nội dung hội thoại">
             {messages.length === 0 ? <article className="message assistant welcome-message">
               <AssistantAvatar className="message-avatar" />
-              <div className="message-content"><p>Em chào anh/chị!<br />Em là trợ lý hỗ trợ hành chính công.<br />Anh/chị cần em hướng dẫn thủ tục gì ạ?</p><time dateTime={new Date(openedAt).toISOString()}>{timeFormatter.format(openedAt)}</time></div>
+              <div className="message-content"><p>Em chào anh/chị!<br />Em là trợ lý hỗ trợ hành chính công.<br />Em sẵn sàng lắng nghe và hỗ trợ anh/chị.</p><time dateTime={new Date(openedAt).toISOString()}>{timeFormatter.format(openedAt)}</time></div>
             </article> : messages.map(message => message.lookup
               ? <SearchReference key={message.id} lookup={message.lookup} />
               : <article className={`message ${message.role}`} key={message.id}>
