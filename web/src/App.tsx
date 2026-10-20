@@ -97,7 +97,7 @@ export default function App() {
 
   return <div className="app-shell">
     <header className="app-header">
-      <a className="brand" href="/" aria-label="Trang chủ Trung tâm Phục vụ hành chính công đặc khu Cô Tô"><img className="brand-mark" src="/brand/public-service.svg" alt="" /><span className="brand-copy"><strong>TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG ĐẶC KHU CÔ TÔ</strong><span>Hệ thống Kiosk Hành chính công thông minh</span></span></a>
+      <a className="brand" href="/" aria-label="Trang chủ Trung tâm Phục vụ hành chính công"><img className="brand-mark" src="/brand/public-service.svg" alt="" /><span className="brand-copy"><strong>TRUNG TÂM PHỤC VỤ HÀNH CHÍNH CÔNG</strong><span>Hệ thống Kiosk Hành chính công thông minh</span></span></a>
       <div className="header-actions"><button className="icon-button" onClick={() => showSettings(true)} aria-label="Mở cài đặt"><Settings2 size={20} /></button></div>
     </header>
     <main className="app-main">
