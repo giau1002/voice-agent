@@ -132,7 +132,7 @@ export default function App() {
         <aside className="chat-panel" aria-labelledby="chat-title">
           <div className="chat-header">
             <div className="chat-heading"><AssistantAvatar className="header-avatar" /><div>
-              <h2 id="chat-title">Hỗ trợ trực tuyến</h2>
+              <h2 id="chat-title">Trợ lý AI</h2>
               <p><span className={`small-dot ${online ? 'active' : ''}`} />{online || busy ? title : 'Trợ lý đã sẵn sàng trò chuyện'}</p>
             </div></div>
             <button className={`connection-badge ${online ? 'online' : ''}`} onClick={() => void connect()}
@@ -140,7 +140,7 @@ export default function App() {
               aria-label={online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}
               title={online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}>
               {busy ? <LoaderCircle className="spin" size={14} /> : online ? <span className="small-dot active" /> : <Phone size={14} />}
-              <span>{online ? 'Trực tuyến' : busy ? 'Đang kết nối' : 'Kết nối'}</span>
+              <span>{online ? 'Đã kết nối' : busy ? 'Đang kết nối' : 'Kết nối'}</span>
               {online && <PhoneOff size={13} />}
             </button>
           </div>

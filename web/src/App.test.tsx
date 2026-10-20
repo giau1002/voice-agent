@@ -43,7 +43,7 @@ it('opens hardware and portrait settings, changes motion, and keeps API keys out
 
 it('places the composer in the chatbot and drafts a suggestion before connection', async () => {
   render(<App />);
-  const chat = screen.getByRole('complementary', { name: 'Hỗ trợ trực tuyến' });
+  const chat = screen.getByRole('complementary', { name: 'Trợ lý AI' });
   expect(within(chat).getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
   expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /^Tra cứu hồ sơ/ }));
@@ -58,7 +58,7 @@ it('sends chat after connecting and updates interim speech text in the same mess
   render(<App />);
   await screen.findByText('Kết nối để gửi tin nhắn');
   fireEvent.click(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' }));
-  await screen.findByText('Trực tuyến');
+  await screen.findByText('Đã kết nối');
   fireEvent.change(screen.getByLabelText('Nội dung tin nhắn'), { target: { value: 'Xin chào!' } });
   fireEvent.click(screen.getByRole('button', { name: 'Gửi tin nhắn' }));
   await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith('Xin chào!'));
