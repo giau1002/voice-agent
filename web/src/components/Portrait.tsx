@@ -27,7 +27,7 @@ export function Portrait({ client, lips, options, onLevel }: {
         })));
         if (!alive || !canvas.current) return;
         const [photo, motionAtlas, flowAtlas, mouthAtlas, characterLayer] = loaded;
-        const assets = { motionAtlas, flowAtlas, mouthAtlas, characterLayer, transparentBackground: true };
+        const assets = { motionAtlas, flowAtlas, mouthAtlas, characterLayer, transparentBackground: false };
         try { renderer = new window.PortraitRendering.PortraitRenderer(canvas.current, photo, assets); }
         catch {
           const old = canvas.current, next = old.cloneNode(true) as HTMLCanvasElement;

@@ -1,16 +1,22 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import type { ClientEvents } from './lib/voice-client';
+
+const mocks = vi.hoisted(() => ({ events: null as ClientEvents | null, sendText: vi.fn().mockResolvedValue(undefined) }));
 
 vi.mock('./components/Portrait', () => ({ Portrait: () => <div aria-label="Nhân vật" /> }));
 vi.mock('./lib/voice-client', () => ({ VoiceClient: class {
+  constructor(events: ClientEvents) { mocks.events = events; }
   disconnect = vi.fn().mockResolvedValue(undefined);
-  connect = vi.fn().mockResolvedValue(undefined);
+  connect = vi.fn(async () => { mocks.events?.link('connected'); mocks.events?.agent('listening'); });
   device = vi.fn().mockResolvedValue(undefined);
+  sendText = mocks.sendText;
   microphoneEnabled() { return false; }
 } }));
 import App from './App';
 
 beforeEach(() => {
+  mocks.events = null; mocks.sendText.mockClear();
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: false, auth_required: false, missing: ['SONIOX_API_KEY'], providers: {}, language: 'vi' }))));
 });
@@ -29,35 +35,39 @@ it('opens hardware and portrait settings, changes motion, and keeps API keys out
   const motion = screen.getByLabelText('Cử động đầu khi nói');
   expect(motion).toBeChecked(); fireEvent.click(motion); expect(motion).not.toBeChecked();
   expect(screen.getByLabelText('Microphone')).toBeInTheDocument();
+  expect(screen.getByRole('slider', { name: /Độ há hàm/ })).toHaveValue('1.2');
   expect(screen.queryByLabelText('SONIOX_API_KEY')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('finds procedures without accents, supports clear, and drafts a question before connection', async () => {
+it('places the composer in the chatbot and drafts a suggestion before connection', async () => {
   render(<App />);
-  fireEvent.click(screen.getByRole('tab', { name: 'Tìm kiếm' }));
-  const search = screen.getByLabelText('Tìm thủ tục');
-  fireEvent.change(search, { target: { value: 'dang ky ket hon' } });
-  expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button', { name: /Thủ tục đăng ký kết hôn/ }));
-  expect((screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement).value).toContain('Thủ tục đăng ký kết hôn');
+  const chat = screen.getByRole('complementary', { name: 'Trò chuyện cùng trợ lý' });
+  expect(within(chat).getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
+  expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Bạn có thể hỗ trợ tôi những gì?' }));
+  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue('Bạn có thể hỗ trợ tôi những gì?');
+  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveFocus();
   expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled();
-  fireEvent.change(search, { target: { value: 'khong co ket qua' } });
-  expect(screen.getByText('Chưa tìm thấy thủ tục')).toBeInTheDocument();
-  fireEvent.click(screen.getByLabelText('Xóa tìm kiếm'));
-  expect(search).toHaveValue('');
-  expect(screen.queryByText('Chưa tìm thấy thủ tục')).not.toBeInTheDocument();
+  expect(mocks.sendText).not.toHaveBeenCalled();
 });
 
-it('uses the forms tab to draft a form question and preserves it when collapsing chat', async () => {
+it('sends chat after connecting and updates interim speech text in the same message', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: true, auth_required: false, missing: [], providers: {}, language: 'vi' }))));
   render(<App />);
-  fireEvent.click(screen.getByRole('tab', { name: 'Mẫu đơn' }));
-  fireEvent.click(screen.getByRole('button', { name: /Thủ tục đăng ký kết hôn/ }));
-  const message = screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement;
-  expect(message.value).toContain('mẫu đơn');
-  const toggle = screen.getByRole('button', { name: 'NỘI DUNG TRÒ CHUYỆN' });
-  fireEvent.click(toggle); expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  fireEvent.click(toggle); expect(message).toBeVisible();
-  expect(message.value).toContain('mẫu đơn');
+  await screen.findByText('Kết nối để gửi tin nhắn');
+  fireEvent.click(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' }));
+  await screen.findByText('Đã kết nối');
+  fireEvent.change(screen.getByLabelText('Nội dung tin nhắn'), { target: { value: 'Xin chào!' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi tin nhắn' }));
+  await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith('Xin chào!'));
+  await waitFor(() => expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue(''));
+  act(() => mocks.events?.message({ id: 'speech-1', role: 'user', text: 'Tôi muốn hỏi', final: false }));
+  expect(screen.getByText('· Đang nhận giọng nói')).toBeInTheDocument();
+  act(() => mocks.events?.message({ id: 'speech-1', role: 'user', text: 'Tôi muốn hỏi một câu.', final: true }));
+  const log = screen.getByRole('log', { name: 'Nội dung hội thoại' });
+  expect(within(log).getAllByRole('article')).toHaveLength(1);
+  expect(within(log).getByText('Tôi muốn hỏi một câu.')).toBeInTheDocument();
+  expect(screen.queryByText('· Đang nhận giọng nói')).not.toBeInTheDocument();
 });
