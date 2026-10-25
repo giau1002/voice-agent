@@ -51,7 +51,7 @@ export function DemoForm(props: Props) {
           <span className="form-upload-copy"><strong>{ocrBusy ? 'Đang đọc tài liệu…' : 'Tải PDF hoặc hình ảnh'}</strong><small>{ocrBusy ? 'Thông tin nhận được sẽ xuất hiện trên phiếu' : 'JPG, PNG, WebP, PDF · tối đa 8 MB'}</small></span>
           {!ocrBusy && <span className="form-upload-cta">Chọn tệp</span>}
         </button>}
-        <p className="form-document-note">OCR bằng Gemini. Có thể nhập trực tiếp nếu chưa có tài liệu.</p>
+        <p className="form-document-note">Có thể nhập trực tiếp nếu chưa có tài liệu.</p>
       </section>
 
       {props.warnings.length > 0 && <ul className="ocr-warnings">{props.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>}
