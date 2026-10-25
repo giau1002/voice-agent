@@ -1,112 +1,163 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { ClientEvents } from './lib/voice-client';
+import { emptyForm, type DemoFormState } from './lib/demo-form';
 
-const mocks = vi.hoisted(() => ({ events: null as ClientEvents | null, connect: vi.fn(), sendText: vi.fn().mockResolvedValue(undefined) }));
-
+const mocks = vi.hoisted(() => ({ events: null as ClientEvents | null, connected: false, connect: vi.fn(), sendText: vi.fn(), formCommand: vi.fn() }));
 vi.mock('./components/Portrait', () => ({ Portrait: () => <div aria-label="Nhân vật" /> }));
 vi.mock('./lib/voice-client', () => ({ VoiceClient: class {
   constructor(events: ClientEvents) { mocks.events = events; }
+  get connected() { return mocks.connected; }
   disconnect = vi.fn().mockResolvedValue(undefined);
-  connect = vi.fn(async (access: string, mic: boolean, input: string) => { mocks.connect(access, mic, input); mocks.events?.link('connected'); mocks.events?.agent('listening'); });
+  connect = vi.fn(async (access: string, mic: boolean, input: string) => {
+    mocks.connect(access, mic, input); mocks.connected = true;
+    mocks.events?.link('connected'); mocks.events?.agent('listening');
+  });
   device = vi.fn().mockResolvedValue(undefined);
+  setMicrophone = vi.fn().mockResolvedValue(undefined);
   sendText = mocks.sendText;
-  microphoneEnabled() { return false; }
+  formCommand = mocks.formCommand;
+  microphoneEnabled() { return true; }
 } }));
 import App from './App';
 
+const configured = { configured: true, auth_required: false, missing: [], providers: {}, language: 'vi' };
+const uploadLabel = 'Chọn tệp PDF hoặc ảnh';
 beforeEach(() => {
-  mocks.events = null; mocks.sendText.mockClear(); mocks.connect.mockClear();
+  mocks.events = null; mocks.connected = false; mocks.connect.mockClear(); mocks.sendText.mockReset(); mocks.formCommand.mockReset();
+  mocks.sendText.mockResolvedValue(undefined);
+  mocks.formCommand.mockImplementation(async (action: string, state: DemoFormState) => {
+    const next = { ...state, visible: action !== 'close', active: action === 'start', confirmed: action === 'confirm', revision: state.revision + 1 };
+    mocks.events?.form?.(next); return next;
+  });
   vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: false, auth_required: false, missing: ['SONIOX_API_KEY'], providers: {}, language: 'vi' }))));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...configured, configured: false, missing: ['SONIOX_API_KEY'] }))));
 });
 
-it('clearly blocks connection until server has real credentials', async () => {
+async function connect() {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(configured))));
   render(<App />);
-  await waitFor(() => expect(screen.getByRole('button', { name: /Bắt đầu trò chuyện/ })).toBeDisabled());
+  const button = screen.getByRole('button', { name: 'Bắt đầu trò chuyện' });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+  await screen.findByRole('button', { name: 'Kết thúc hội thoại' });
+}
+
+it('shows the avatar and procedure guide without any chat log or message input', async () => {
+  render(<App />);
+  expect(screen.getByRole('heading', { name: 'Trung tâm Phục vụ Hành chính công' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Nhân vật')).toBeInTheDocument();
+  expect(screen.queryByRole('log')).not.toBeInTheDocument();
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' })).toBeDisabled());
   expect(screen.getByText('SONIOX_API_KEY')).toBeInTheDocument();
-  expect(screen.getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
 });
 
-it('opens hardware and portrait settings, changes motion, and keeps API keys out of the UI', async () => {
+it('keeps device settings and hides local mouth controls for the GPU avatar', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ ...configured, avatar_mode: 'flashhead' }))));
   render(<App />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' })).toBeEnabled());
   fireEvent.click(screen.getByLabelText('Mở cài đặt'));
-  const dialog = screen.getByRole('dialog'); expect(dialog).toBeInTheDocument();
-  const motion = screen.getByLabelText('Cử động đầu khi nói');
-  expect(motion).toBeChecked(); fireEvent.click(motion); expect(motion).not.toBeChecked();
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(screen.getByLabelText('Microphone')).toBeInTheDocument();
-  expect(screen.getByRole('slider', { name: /Độ há hàm/ })).toHaveValue('1.5');
-  expect(screen.queryByLabelText('SONIOX_API_KEY')).not.toBeInTheDocument();
+  expect(screen.queryByRole('slider', { name: /Độ há hàm/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Xong' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('places the composer in the chatbot and drafts a suggestion before connection', async () => {
-  render(<App />);
-  const chat = screen.getByRole('complementary', { name: 'Trợ lý AI' });
-  expect(within(chat).getByLabelText('Nội dung tin nhắn')).toBeInTheDocument();
-  expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /^Tra cứu hồ sơ/ }));
-  expect((screen.getByLabelText('Nội dung tin nhắn') as HTMLTextAreaElement).value).toContain('hướng dẫn cách tra cứu');
-  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveFocus();
-  expect(screen.getByRole('button', { name: 'Gửi tin nhắn' })).toBeDisabled();
-  expect(mocks.sendText).not.toHaveBeenCalled();
+it('connects with the microphone and requests procedure guidance without opening a form', async () => {
+  await connect();
+  expect(mocks.connect).toHaveBeenCalledWith('', true, '');
+  fireEvent.click(screen.getByRole('button', { name: /^Đăng ký khai sinh/ }));
+  await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith(expect.stringContaining('Hãy hướng dẫn trước, chưa mở biểu mẫu')));
+  act(() => mocks.events?.message({ id: 'guide', role: 'assistant', text: 'Anh/chị muốn tìm hiểu thủ tục tại địa phương nào ạ?', final: true }));
+  expect(screen.getByText('Anh/chị muốn tìm hiểu thủ tục tại địa phương nào ạ?')).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).not.toBeInTheDocument();
+  expect(mocks.formCommand).not.toHaveBeenCalled();
 });
 
-it('sends chat after connecting and updates interim speech text in the same message', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: true, auth_required: false, missing: [], providers: {}, language: 'vi' }))));
-  render(<App />);
-  await screen.findByText('Kết nối để gửi tin nhắn');
-  fireEvent.click(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' }));
-  await screen.findByText('Đã kết nối');
-  fireEvent.change(screen.getByLabelText('Nội dung tin nhắn'), { target: { value: 'Xin chào!' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Gửi tin nhắn' }));
-  await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith('Xin chào!'));
-  await waitFor(() => expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue(''));
-  act(() => mocks.events?.message({ id: 'speech-1', role: 'user', text: 'Tôi muốn hỏi', final: false }));
-  expect(screen.getByText('Đang nhận giọng nói')).toBeInTheDocument();
-  act(() => mocks.events?.message({ id: 'speech-1', role: 'user', text: 'Tôi muốn hỏi một câu.', final: true }));
-  const log = screen.getByRole('log', { name: 'Nội dung hội thoại' });
-  expect(within(log).getAllByRole('article')).toHaveLength(1);
-  expect(within(log).getByText('Tôi muốn hỏi một câu.')).toBeInTheDocument();
-  expect(screen.queryByText('Đang nhận giọng nói')).not.toBeInTheDocument();
+it('shows partial recognized speech immediately and replaces it with the final phrase', async () => {
+  await connect();
+  act(() => mocks.events?.message({ id: 'speech', role: 'user', text: 'Tôi muốn', final: false }));
+  expect(screen.getByRole('status', { name: 'Lời nói đã nhận' })).toHaveTextContent('Tôi muốn');
+  act(() => mocks.events?.message({ id: 'speech', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true }));
+  expect(screen.getByRole('status', { name: 'Lời nói đã nhận' })).toHaveTextContent('Tôi muốn làm giấy khai sinh');
+  expect(screen.queryByRole('log')).not.toBeInTheDocument();
 });
 
-it('keeps support options after the greeting and hides them after the user starts chatting', () => {
-  render(<App />);
-  act(() => mocks.events?.message({ id: 'greeting', role: 'assistant', text: 'Chào bạn, mình đây!', final: true }));
-  expect(screen.getByRole('button', { name: /^Đặt lịch hỗ trợ/ })).toBeInTheDocument();
-  act(() => mocks.events?.message({ id: 'user-first', role: 'user', text: 'Kể mình nghe chuyện vui nhé.', final: true }));
-  expect(screen.queryByRole('button', { name: /^Đặt lịch hỗ trợ/ })).not.toBeInTheDocument();
+it('opens the form from a voice tool event and returns to guidance on a close event', async () => {
+  await connect();
+  const state = { ...emptyForm(), visible: true, active: true, revision: 1 };
+  act(() => mocks.events?.form?.(state));
+  expect(screen.getByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Trung tâm Phục vụ Hành chính công' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('log')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Nhân vật')).toBeInTheDocument();
+  act(() => mocks.events?.form?.({ ...state, visible: false, active: false, revision: 2 }));
+  expect(screen.getByRole('heading', { name: 'Trung tâm Phục vụ Hành chính công' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).not.toBeInTheDocument();
 });
 
-it('starts a voice session from the composer microphone', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ configured: true, auth_required: false, missing: [], providers: {}, language: 'vi' }))));
-  render(<App />);
-  const mic = screen.getByRole('button', { name: 'Bắt đầu nói chuyện' });
-  await waitFor(() => expect(mic).toBeEnabled());
-  fireEvent.click(mic);
-  await waitFor(() => expect(mocks.connect).toHaveBeenCalledWith('', true, ''));
+it('supports a touch button to open and close the same voice form', async () => {
+  await connect();
+  fireEvent.click(screen.getByRole('button', { name: 'Mở biểu mẫu' }));
+  await screen.findByRole('heading', { name: 'Tờ khai đăng ký khai sinh' });
+  expect(mocks.formCommand).toHaveBeenCalledWith('start', expect.anything());
+  fireEvent.click(screen.getByRole('button', { name: 'Đóng biểu mẫu' }));
+  await screen.findByRole('heading', { name: 'Trung tâm Phục vụ Hành chính công' });
+  expect(mocks.formCommand).toHaveBeenCalledWith('close', expect.objectContaining({ active: true }));
 });
 
-it('inserts a text attachment into a draft without sending or uploading it', async () => {
-  render(<App />);
-  const file = new File(['Nội dung cần hỏi'], 'ghi-chu.txt', { type: 'text/plain' });
-  Object.defineProperty(file, 'text', { value: async () => 'Nội dung cần hỏi' });
-  fireEvent.change(screen.getByLabelText('Chọn tệp văn bản'), { target: { files: [file] } });
-  await waitFor(() => expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue('[ghi-chu.txt]\nNội dung cần hỏi'));
-  expect(mocks.sendText).not.toHaveBeenCalled();
+it('uploads a PDF during voice filling, pauses the form and resumes with OCR data', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 1 }));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    text: 'Trẻ Trần Minh An, mẹ Nguyễn An', fields: { child_name: 'Trần Minh An', mother_name: 'Nguyễn An' }, warnings: ['Ảnh hơi mờ'],
+  }))));
+  const file = new File(['%PDF-1.4'], 'ho-so.pdf', { type: 'application/pdf' });
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [file] } });
+  await waitFor(() => expect(screen.getByRole('textbox', { name: /^Họ tên trẻ/ })).toHaveValue('Trần Minh An'));
+  expect(mocks.formCommand).toHaveBeenCalledWith('stop', expect.objectContaining({ revision: 1 }));
+  expect(mocks.formCommand).toHaveBeenCalledWith('start', expect.objectContaining({ sources: { child_name: 'ocr', mother_name: 'ocr' }, fields: expect.objectContaining({ child_name: 'Trần Minh An', mother_name: 'Nguyễn An' }) }));
+  expect(screen.getByText('Ảnh hơi mờ')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Thay tài liệu' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Gửi tin nhắn/ })).not.toBeInTheDocument();
 });
 
-it('rejects unsupported or oversized attachment drafts without losing typed text', async () => {
+it('keeps a manual draft on OCR failure and confirms only a complete declaration', async () => {
   render(<App />);
-  fireEvent.change(screen.getByLabelText('Nội dung tin nhắn'), { target: { value: 'Bản nháp đang viết' } });
-  fireEvent.change(screen.getByLabelText('Chọn tệp văn bản'), { target: { files: [new File(['PDF'], 'ho-so.pdf')] } });
-  expect(screen.getByRole('alert')).toHaveTextContent('.txt hoặc .md');
-  const file = new File(['x'.repeat(2000)], 'dai.txt', { type: 'text/plain' });
-  Object.defineProperty(file, 'text', { value: async () => 'x'.repeat(2000) });
-  fireEvent.change(screen.getByLabelText('Chọn tệp văn bản'), { target: { files: [file] } });
-  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('2.000 ký tự'));
-  expect(screen.getByLabelText('Nội dung tin nhắn')).toHaveValue('Bản nháp đang viết');
-  expect(mocks.sendText).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Mở biểu mẫu' }));
+  fireEvent.change(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ }), { target: { value: 'Nguyễn An' } });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: 'Chưa OCR được tệp.' }), { status: 502 })));
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'mo.png')] } });
+  await screen.findByText('Chưa OCR được tệp.');
+  expect(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ })).toHaveValue('Nguyễn An');
+  expect(screen.getByRole('button', { name: 'Xác nhận tờ khai' })).toBeDisabled();
+  for (const [name, value] of [['Họ tên trẻ', 'Trần Minh An'], ['Nơi sinh của trẻ', 'Bệnh viện Mẫu'], ['Họ tên mẹ', 'Nguyễn An'], ['Quan hệ với trẻ', 'Mẹ'], ['Địa chỉ người đi đăng ký', '123 Đường Mẫu']]) {
+    fireEvent.change(screen.getByRole('textbox', { name: new RegExp('^' + name) }), { target: { value } });
+  }
+  fireEvent.change(screen.getByLabelText(/^Ngày sinh của trẻ/), { target: { value: '2025-01-10' } });
+  fireEvent.change(screen.getByRole('combobox', { name: /^Giới tính của trẻ/ }), { target: { value: 'Nam' } });
+  expect(screen.getByRole('textbox', { name: /^Họ tên cha/ })).toHaveValue('');
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận tờ khai' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Chưa gửi đến cơ quan nào');
+});
+
+it('ignores stale form packets so a closed form is not reopened', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: false, revision: 3 }));
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 2 }));
+  expect(screen.queryByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).not.toBeInTheDocument();
+});
+
+it('passes an existing draft to the worker after connecting from the form', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(configured))));
+  render(<App />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Bắt đầu trò chuyện' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Mở biểu mẫu' }));
+  fireEvent.change(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ }), { target: { value: 'Nguyễn An' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Kết nối trợ lý' }));
+  await waitFor(() => expect(mocks.formCommand).toHaveBeenCalledWith('start', expect.objectContaining({ fields: expect.objectContaining({ full_name: 'Nguyễn An' }) })));
+  expect(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ })).toHaveValue('Nguyễn An');
 });

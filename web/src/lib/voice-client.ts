@@ -1,6 +1,7 @@
 import { Room, RoomEvent, Track, type RemoteParticipant, type Participant, type RemoteTrack } from 'livekit-client';
 import { AudioMeter } from './audio-meter';
 import { parseWebLookup, type WebLookup } from './web-search';
+import { parseFormState, type DemoFormState } from './demo-form';
 
 export type AgentState = 'idle' | 'initializing' | 'listening' | 'thinking' | 'speaking';
 export type LinkState = 'offline' | 'connecting' | 'connected' | 'reconnecting';
@@ -15,6 +16,8 @@ export interface ClientEvents {
   playback: (allowed: boolean) => void;
   quality: (value: string) => void;
   ended: () => void;
+  video?: (track: RemoteTrack | null) => void;
+  form?: (state: DemoFormState) => void;
 }
 export interface Session {
   session_id: string; session_key: string; token: string; url: string;
@@ -51,6 +54,8 @@ export class VoiceClient {
   private aborter: AbortController | null = null;
   private userSpeaking = false;
   private agentSpeaking = false;
+  private avatarTrack: RemoteTrack | null = null;
+  private directTranscripts = false;
 
   constructor(private events: ClientEvents) {}
 
@@ -87,8 +92,15 @@ export class VoiceClient {
       const current = () => generation === this.generation && this.room === room;
       room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
         if (current() && participant.isAgent && track.kind === Track.Kind.Audio) this.attachAudio(track, participant);
+        if (current() && participant.isAgent && track.kind === Track.Kind.Video && _publication.trackName === 'avatar-video') {
+          this.avatarTrack = track;
+          this.events.video?.(track);
+        }
       });
       room.on(RoomEvent.TrackUnsubscribed, track => {
+        if (current() && track === this.avatarTrack) {
+          this.avatarTrack = null; this.events.video?.(null);
+        }
         if (track.kind === Track.Kind.Audio) {
           track.detach().forEach(element => element.remove());
           this.audio.delete(track.sid || 'audio'); this.meter.detach();
@@ -126,6 +138,11 @@ export class VoiceClient {
             this.userSpeaking = event.payload.state === 'speaking';
             if (this.userSpeaking) this.events.interrupt();
           }
+          if (event.type === 'user.transcript' && typeof event.payload.text === 'string' && event.payload.text.trim()) {
+            this.directTranscripts = true;
+            this.events.message({ id: 'stt:' + String(event.payload.id || 'current'),
+              role: 'user', text: event.payload.text.slice(0, 2000), final: event.payload.final === true });
+          }
           if (event.type === 'agent.error') this.events.error(String(event.payload.message || 'Agent gặp lỗi.'));
           if (event.type === 'session.expired') { this.events.error('Phiên đã hết thời gian. Bạn có thể mở phiên mới.'); void this.disconnect(); }
         } catch { /* Ignore unrecognized data envelopes. */ }
@@ -136,16 +153,19 @@ export class VoiceClient {
             ? room.localParticipant : room.remoteParticipants.get(info.identity);
           if (!participant || (!participant.isAgent && !participant.isLocal)) return;
           const role = participant.isAgent ? 'assistant' : 'user';
+          if (role === 'user' && this.directTranscripts) return;
           const messageId = info.identity + ':' + (reader.info.attributes?.['lk.segment_id'] || reader.info.id);
           let text = '';
           try {
             for await (const delta of reader) {
               if (!current()) return;
+              if (role === 'user' && this.directTranscripts) return;
               text += delta;
               this.events.message({ id: messageId, role, text, final: false });
               if (role === 'assistant') this.events.text(delta, false);
             }
             if (!current()) return;
+            if (role === 'user' && this.directTranscripts) return;
             this.events.message({ id: messageId, role, text,
               final: role === 'assistant' || reader.info.attributes?.['lk.transcription_final'] === 'true' });
             if (role === 'assistant') this.events.text('', true);
@@ -167,6 +187,22 @@ export class VoiceClient {
             if (lookup) this.events.message({ id: 'lookup:' + reader.info.id,
               role: 'assistant', text: lookup.answer, final: true, lookup });
           } catch { /* Ignore malformed or interrupted source envelopes. */ }
+        })();
+      });
+      room.registerTextStreamHandler('portrait.form', (reader, info) => {
+        if (!current() || !room.remoteParticipants.get(info.identity)?.isAgent) return;
+        void (async () => {
+          try {
+            let payload = '';
+            for await (const chunk of reader) {
+              if (!current()) return;
+              payload += chunk;
+              if (payload.length > 12000) return;
+            }
+            if (!current()) return;
+            const state = parseFormState(JSON.parse(payload));
+            if (state) this.events.form?.(state);
+          } catch { /* Ignore incomplete or invalid form updates. */ }
         })();
       });
       await room.connect(session.url, session.token);
@@ -233,6 +269,21 @@ export class VoiceClient {
     });
   }
 
+  async formCommand(action: 'start' | 'stop' | 'confirm' | 'close', state: DemoFormState): Promise<DemoFormState> {
+    const room = this.room;
+    const agent = room && [...room.remoteParticipants.values()].find(p => p.isAgent);
+    if (!this.connected || !room || !agent) throw new Error('Kết nối và chờ trợ lý sẵn sàng trước khi hỏi đáp điền form.');
+    const payload = await room.localParticipant.performRpc({
+      destinationIdentity: agent.identity, method: 'portrait.form', responseTimeout: 10,
+      payload: JSON.stringify({ action, fields: state.fields, sources: state.sources, expected_revision: state.revision }),
+    });
+    if (this.room !== room) throw new Error('Phiên đã kết thúc. Anh/chị kết nối lại nhé.');
+    const result = parseFormState(JSON.parse(payload));
+    if (!result) throw new Error('Chưa nhận được trạng thái form. Anh/chị thử lại nhé.');
+    this.events.form?.(result);
+    return result;
+  }
+
   private async releaseSession(session: Session) {
     try {
       const response = await fetch(`/api/sessions/${session.session_id}`, {
@@ -249,9 +300,11 @@ export class VoiceClient {
     const room = this.room, session = this.session;
     this.room = null; this.session = null;
     this.agentSpeaking = false; this.userSpeaking = false;
+    this.directTranscripts = false;
     this.meter.close();
     for (const elements of this.audio.values()) elements.forEach(element => { element.pause(); element.srcObject = null; element.remove(); });
     this.audio.clear(); this.events.interrupt(); this.events.link('offline'); this.events.agent('idle'); this.events.ended();
+    this.avatarTrack = null; this.events.video?.(null);
     if (room) { room.removeAllListeners(); await room.disconnect(); }
     if (session) await this.releaseSession(session);
   }

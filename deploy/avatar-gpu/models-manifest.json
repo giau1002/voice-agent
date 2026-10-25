@@ -1,0 +1,90 @@
+{
+  "source": {
+    "url": "https://codeload.github.com/TMElyralab/MuseTalk/zip/0a89dec45a0192b824e3cf4daf96c239440c5ed8",
+    "revision": "0a89dec45a0192b824e3cf4daf96c239440c5ed8",
+    "sha256": "52521c3b5887558a29b39405b84eaba25e1194350b01bcc031002fa3ecd918e9"
+  },
+  "files": [
+    {
+      "repo": "TMElyralab/MuseTalk",
+      "revision": "2bcb936e2fddb4d86db4c62fd45b387d0c061571",
+      "remote": "musetalkV15/musetalk.json",
+      "path": "musetalkV15/musetalk.json",
+      "size": 748,
+      "algorithm": "git-sha1",
+      "digest": "b822db87e503a283fbbee73617f89dcd294cb91c"
+    },
+    {
+      "repo": "TMElyralab/MuseTalk",
+      "revision": "2bcb936e2fddb4d86db4c62fd45b387d0c061571",
+      "remote": "musetalkV15/unet.pth",
+      "path": "musetalkV15/unet.pth",
+      "size": 3400074924,
+      "algorithm": "sha256",
+      "digest": "7ebf6c98c181e20838e4c0054e96e944ac60d5d692cc01db42839fe11b787007"
+    },
+    {
+      "repo": "stabilityai/sd-vae-ft-mse",
+      "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+      "remote": "config.json",
+      "path": "sd-vae/config.json",
+      "size": 547,
+      "algorithm": "git-sha1",
+      "digest": "0db26717579be63eb0ddbf15b43faa43700dfe5a"
+    },
+    {
+      "repo": "stabilityai/sd-vae-ft-mse",
+      "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+      "remote": "diffusion_pytorch_model.bin",
+      "path": "sd-vae/diffusion_pytorch_model.bin",
+      "size": 334707217,
+      "algorithm": "sha256",
+      "digest": "1b4889b6b1d4ce7ae320a02dedaeff1780ad77d415ea0d744b476155c6377ddc"
+    },
+    {
+      "repo": "openai/whisper-tiny",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "remote": "config.json",
+      "path": "whisper/config.json",
+      "size": 1983,
+      "algorithm": "git-sha1",
+      "digest": "417aa9de49a132dd3eb6a56d3be2718b15f08917"
+    },
+    {
+      "repo": "openai/whisper-tiny",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "remote": "preprocessor_config.json",
+      "path": "whisper/preprocessor_config.json",
+      "size": 184990,
+      "algorithm": "git-sha1",
+      "digest": "c2048dfa9fd94a052e62e908d2c4dfb18534b4d2"
+    },
+    {
+      "repo": "openai/whisper-tiny",
+      "revision": "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+      "remote": "pytorch_model.bin",
+      "path": "whisper/pytorch_model.bin",
+      "size": 151095027,
+      "algorithm": "sha256",
+      "digest": "9607f98a2b22d9e229ae43c52ecea79dcede9e0c5cfae67e8da6eda86d8aac1d"
+    },
+    {
+      "repo": "ManyOtherFunctions/face-parse-bisent",
+      "revision": "0073b233a5a3c4b1377d4dbf49245017938a72b5",
+      "remote": "79999_iter.pth",
+      "path": "face-parse-bisent/79999_iter.pth",
+      "size": 53289463,
+      "algorithm": "sha256",
+      "digest": "468e13ca13a9b43cc0881a9f99083a430e9c0a38abd935431d1c28ee94b26567"
+    },
+    {
+      "repo": "ManyOtherFunctions/face-parse-bisent",
+      "revision": "0073b233a5a3c4b1377d4dbf49245017938a72b5",
+      "remote": "resnet18-5c106cde.pth",
+      "path": "face-parse-bisent/resnet18-5c106cde.pth",
+      "size": 46827520,
+      "algorithm": "sha256",
+      "digest": "5c106cde386e87d4033832f2996f5493238eda96ccf559d1d62760c4de0613f8"
+    }
+  ]
+}

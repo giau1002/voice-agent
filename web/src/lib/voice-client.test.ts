@@ -5,7 +5,7 @@ vi.mock('./audio-meter', () => ({ AudioMeter: class {
   unlock = vi.fn().mockResolvedValue(undefined); attach = vi.fn(); detach = vi.fn(); close = vi.fn(); sample() { return .4; }
 } }));
 vi.mock('livekit-client', () => ({
-  Track: { Kind: { Audio: 'audio' } },
+  Track: { Kind: { Audio: 'audio', Video: 'video' } },
   RoomEvent: Object.fromEntries(['TrackSubscribed', 'TrackUnsubscribed', 'ParticipantAttributesChanged', 'ParticipantConnected', 'ParticipantDisconnected', 'AudioPlaybackStatusChanged', 'ConnectionQualityChanged', 'Reconnecting', 'Reconnected', 'Disconnected', 'DataReceived'].map(name => [name, name])),
   Room: class {
     handlers = new Map<string, (...args: any[]) => void>();
@@ -31,6 +31,7 @@ vi.mock('livekit-client', () => ({
   },
 }));
 import { VoiceClient, connectionError, type ClientEvents } from './voice-client';
+import { emptyForm } from './demo-form';
 
 const session = { session_id: 'session', session_key: 'session-control', token: 'room-token', url: 'ws://localhost:7880', identity: 'user', room: 'room', max_seconds: 1800 };
 function events(): ClientEvents {
@@ -45,6 +46,61 @@ beforeEach(() => {
 });
 
 describe('voice transport lifecycle', () => {
+  it('sends form commands to the agent with the current revision and returns its state', async () => {
+    const callbacks = { ...events(), form: vi.fn() }, client = new VoiceClient(callbacks);
+    const draft = emptyForm(); draft.fields.full_name = 'Nguyễn An';
+    await expect(client.formCommand('start', draft)).rejects.toThrow('Kết nối');
+    await client.connect('', false, '');
+    const state = { ...draft, active: true, revision: 1 };
+    const room = mocks.rooms[0];
+    room.localParticipant.performRpc.mockResolvedValue(JSON.stringify(state));
+    await expect(client.formCommand('start', draft)).resolves.toEqual(state);
+    const command = room.localParticipant.performRpc.mock.calls.at(-1)[0];
+    expect(command.method).toBe('portrait.form');
+    expect(JSON.parse(command.payload)).toMatchObject({ action: 'start', expected_revision: 0, fields: { full_name: 'Nguyễn An' } });
+    expect(callbacks.form).toHaveBeenLastCalledWith(state);
+    await client.disconnect();
+  });
+
+  it('only accepts valid form streams from the current room agent', async () => {
+    const callbacks = { ...events(), form: vi.fn() }, client = new VoiceClient(callbacks);
+    await client.connect('', false, '');
+    const handler = mocks.rooms[0].streams.get('portrait.form');
+    const state = { ...emptyForm(), active: true, revision: 1 };
+    const reader = (payload: unknown) => ({ async *[Symbol.asyncIterator]() { yield JSON.stringify(payload); } });
+    handler(reader(state), { identity: 'other' });
+    handler(reader({ active: true }), { identity: 'agent' });
+    await flush();
+    expect(callbacks.form).not.toHaveBeenCalled();
+    handler(reader(state), { identity: 'agent' });
+    await flush();
+    expect(callbacks.form).toHaveBeenLastCalledWith(state);
+    await client.disconnect(); callbacks.form.mockClear();
+    handler(reader(state), { identity: 'agent' });
+    await flush();
+    expect(callbacks.form).not.toHaveBeenCalled();
+  });
+
+  it('shows only the agent avatar video and clears it on unsubscribe/disconnect', async () => {
+    const callbacks = { ...events(), video: vi.fn() }, client = new VoiceClient(callbacks);
+    await client.connect('', false, '');
+    const room = mocks.rooms[0], video = { kind: 'video' };
+    const subscribed = room.handlers.get('TrackSubscribed');
+    callbacks.video.mockClear();
+    subscribed(video, { trackName: 'avatar-video' }, { isAgent: false });
+    subscribed(video, { trackName: 'unrelated-camera' }, { isAgent: true });
+    expect(callbacks.video).not.toHaveBeenCalled();
+    subscribed(video, { trackName: 'avatar-video' }, { isAgent: true });
+    expect(callbacks.video).toHaveBeenLastCalledWith(video);
+    room.handlers.get('TrackUnsubscribed')(video);
+    expect(callbacks.video).toHaveBeenLastCalledWith(null);
+    subscribed(video, { trackName: 'avatar-video' }, { isAgent: true });
+    await client.disconnect();
+    expect(callbacks.video).toHaveBeenLastCalledWith(null);
+    subscribed(video, { trackName: 'avatar-video' }, { isAgent: true });
+    expect(callbacks.video).toHaveBeenLastCalledWith(null);
+  });
+
   it('preserves the ICE failure when SDK emits Disconnected before connect rejects', async () => {
     mocks.failIce = true;
     const callbacks = events(), client = new VoiceClient(callbacks);
@@ -142,6 +198,31 @@ describe('voice transport lifecycle', () => {
     callbacks.message = vi.fn();
     await client.disconnect();
     handler(reader(), { identity: 'agent' }); await flush();
+    expect(callbacks.message).not.toHaveBeenCalled();
+  });
+
+  it('shows interim and final STT over agent data when no transcription stream arrives', async () => {
+    const callbacks = events(), client = new VoiceClient(callbacks);
+    await client.connect('', false, '');
+    const room = mocks.rooms[0];
+    const receive = room.handlers.get('DataReceived');
+    const packet = (text: string, final: boolean) => new TextEncoder().encode(JSON.stringify({
+      type: 'user.transcript', payload: { id: 'utterance', text, final },
+    }));
+    receive(packet('Tôi muốn', false), { isAgent: false }, 0, 'portrait');
+    expect(callbacks.message).not.toHaveBeenCalled();
+    receive(packet('Tôi muốn', false), { isAgent: true }, 0, 'portrait');
+    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn', final: false });
+    receive(packet('Tôi muốn làm giấy khai sinh', true), { isAgent: true }, 0, 'portrait');
+    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true });
+    const streams = room.streams.get('lk.transcription');
+    streams({ info: { id: 'late-stream', attributes: {} }, async *[Symbol.asyncIterator]() { yield 'Tôi'; } }, { identity: 'user' });
+    await flush();
+    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true });
+    expect(callbacks.text).not.toHaveBeenCalled();
+    await client.disconnect();
+    vi.mocked(callbacks.message).mockClear();
+    receive(packet('Phiên cũ', true), { isAgent: true }, 0, 'portrait');
     expect(callbacks.message).not.toHaveBeenCalled();
   });
 });

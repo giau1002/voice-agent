@@ -1,0 +1,91 @@
+{
+  "source": {
+    "url": "https://codeload.github.com/Soul-AILab/SoulX-FlashHead/zip/9bc03de06bb0de82cd6bc477804512ae06144bf2",
+    "revision": "9bc03de06bb0de82cd6bc477804512ae06144bf2",
+    "digest": "434b0a5ec3ac3bfde353bee4b6956c1c4492aebf4ec8671f8248255ba75125a5",
+    "prefix": "SoulX-FlashHead-9bc03de06bb0de82cd6bc477804512ae06144bf2/"
+  },
+  "files": [
+    {
+      "repo": "Soul-AILab/SoulX-FlashHead-1_3B",
+      "revision": "5fbd2e44ba08ab2deb28bd55cff2c15523e51ba5",
+      "remote": "Model_Lite/config.json",
+      "path": "flashhead/Model_Lite/config.json",
+      "size": 357,
+      "algorithm": "git-sha1",
+      "digest": "8d54568d78e315a926d48136c8a6f6aa5286b005"
+    },
+    {
+      "repo": "Soul-AILab/SoulX-FlashHead-1_3B",
+      "revision": "5fbd2e44ba08ab2deb28bd55cff2c15523e51ba5",
+      "remote": "Model_Lite/diffusion_pytorch_model.safetensors",
+      "path": "flashhead/Model_Lite/diffusion_pytorch_model.safetensors",
+      "size": 6107542048,
+      "algorithm": "sha256",
+      "digest": "aaf1cde6e80ca23f740aae236c47954249f65b151db133cc0f77d3a138ccdf6e"
+    },
+    {
+      "repo": "Soul-AILab/SoulX-FlashHead-1_3B",
+      "revision": "5fbd2e44ba08ab2deb28bd55cff2c15523e51ba5",
+      "remote": "VAE_LTX/config.json",
+      "path": "flashhead/VAE_LTX/config.json",
+      "size": 501,
+      "algorithm": "git-sha1",
+      "digest": "3a9d81963b21d0c4cfba102fff93676852b52588"
+    },
+    {
+      "repo": "Soul-AILab/SoulX-FlashHead-1_3B",
+      "revision": "5fbd2e44ba08ab2deb28bd55cff2c15523e51ba5",
+      "remote": "VAE_LTX/diffusion_pytorch_model.safetensors",
+      "path": "flashhead/VAE_LTX/diffusion_pytorch_model.safetensors",
+      "size": 1676798532,
+      "algorithm": "sha256",
+      "digest": "265ca87cb5dff5e37f924286e957324e282fe7710a952a7dafc0df43883e2010"
+    },
+    {
+      "repo": "Soul-AILab/SoulX-FlashHead-1_3B",
+      "revision": "5fbd2e44ba08ab2deb28bd55cff2c15523e51ba5",
+      "remote": "README.md",
+      "path": "flashhead/README.md",
+      "size": 8872,
+      "algorithm": "git-sha1",
+      "digest": "b80c2ddfaddd49b8c7cc6fd1f93e5c18c704167f"
+    },
+    {
+      "repo": "facebook/wav2vec2-base-960h",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "remote": "config.json",
+      "path": "wav2vec2/config.json",
+      "size": 1596,
+      "algorithm": "git-sha1",
+      "digest": "8ca9cc7496e145e37d09cec17d0c3bf9b8523c8e"
+    },
+    {
+      "repo": "facebook/wav2vec2-base-960h",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "remote": "preprocessor_config.json",
+      "path": "wav2vec2/preprocessor_config.json",
+      "size": 159,
+      "algorithm": "git-sha1",
+      "digest": "3f24dc078fcba55ee1d417a413847ead40c093a3"
+    },
+    {
+      "repo": "facebook/wav2vec2-base-960h",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "remote": "model.safetensors",
+      "path": "wav2vec2/model.safetensors",
+      "size": 377607901,
+      "algorithm": "sha256",
+      "digest": "8aa76ab2243c81747a1f832954586bc566090c83a0ac167df6f31f0fa917d74a"
+    },
+    {
+      "repo": "facebook/wav2vec2-base-960h",
+      "revision": "22aad52d435eb6dbaf354bdad9b0da84ce7d6156",
+      "remote": "README.md",
+      "path": "wav2vec2/README.md",
+      "size": 4431,
+      "algorithm": "git-sha1",
+      "digest": "c7fe2047d7ac9b9816848c657b2a492ee95b264b"
+    }
+  ]
+}

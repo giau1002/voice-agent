@@ -1,0 +1,96 @@
+{
+  "scope": "Real GPU over AnyDesk + native LiveKit; prerecorded Vietnamese PCM; no STT/LLM/TTS request",
+  "ok": true,
+  "playback_seconds": 6.495375,
+  "interrupted": false,
+  "wall_s": 9.238,
+  "received": {
+    "audio": 933,
+    "video": 183,
+    "loud": true
+  },
+  "frame_input_underruns": 0,
+  "max_frame_input_gap_ms": 0,
+  "audio_headroom_at_chunk_boundaries_ms": [
+    226,
+    233,
+    240,
+    231,
+    238,
+    245
+  ],
+  "renderer_timings": [
+    {
+      "offset": 0,
+      "bytes": 1803243,
+      "order_wait_ms": 0,
+      "headers_ms": 656,
+      "download_ms": 1582,
+      "decode_ms": 116
+    },
+    {
+      "offset": 15360,
+      "bytes": 1755108,
+      "order_wait_ms": 654,
+      "headers_ms": 1511,
+      "download_ms": 545,
+      "decode_ms": 84
+    },
+    {
+      "offset": 30720,
+      "bytes": 1737330,
+      "order_wait_ms": 0,
+      "headers_ms": 554,
+      "download_ms": 541,
+      "decode_ms": 85
+    },
+    {
+      "offset": 46080,
+      "bytes": 1777253,
+      "order_wait_ms": 0,
+      "headers_ms": 518,
+      "download_ms": 538,
+      "decode_ms": 86
+    },
+    {
+      "offset": 61440,
+      "bytes": 1753437,
+      "order_wait_ms": 0,
+      "headers_ms": 506,
+      "download_ms": 497,
+      "decode_ms": 89
+    },
+    {
+      "offset": 76800,
+      "bytes": 1755745,
+      "order_wait_ms": 0,
+      "headers_ms": 523,
+      "download_ms": 496,
+      "decode_ms": 111
+    },
+    {
+      "offset": 92160,
+      "bytes": 1764997,
+      "order_wait_ms": 0,
+      "headers_ms": 509,
+      "download_ms": 496,
+      "decode_ms": 93
+    },
+    {
+      "offset": 107520,
+      "bytes": 1793457,
+      "order_wait_ms": 0,
+      "headers_ms": 517,
+      "download_ms": 533,
+      "decode_ms": 92
+    },
+    {
+      "offset": 122880,
+      "bytes": 1809845,
+      "order_wait_ms": 0,
+      "headers_ms": 525,
+      "download_ms": 540,
+      "decode_ms": 97
+    }
+  ]
+}

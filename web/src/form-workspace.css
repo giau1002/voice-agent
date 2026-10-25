@@ -1,0 +1,127 @@
+.portrait-stage { position: absolute; inset: 0; overflow: hidden; }
+
+.demo-form-panel { grid-area: form; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid #dce8f6; border-radius: 18px; background: white; color: #35567d; }
+.demo-form-header { flex-shrink: 0; padding: 22px 28px 0; border-bottom: 1px solid #e8eff8; }
+.demo-form-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1000px; margin: 0 auto; }
+.demo-form-title { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.form-title-icon { display: grid; place-items: center; flex-shrink: 0; width: 46px; height: 46px; border-radius: 12px; color: #2486e8; background: #edf6ff; }
+.demo-form-title h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -.4px; line-height: 1.4; }
+.demo-form-title p { margin: 0; font-size: 10px; line-height: 1.6; color: #8498af; }
+.demo-form-title p span { margin: 0 5px; }
+.demo-form-heading .icon-button { width: 34px; height: 34px; border-radius: 9px; background: white; }
+.form-steps { display: flex; align-items: center; padding: 18px 0 16px; margin: 0 auto; list-style: none; max-width: 1000px; gap: 18px; }
+.form-steps li { display: flex; align-items: center; gap: 8px; min-width: 0; color: #a0aec0; font-size: 11px; line-height: 1.5; }
+.form-step-number { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #f1f4f8; color: #9aaabe; font-size: 10px; flex-shrink: 0; }
+.form-steps .current { color: #247cd5; font-weight: 600; }
+.form-steps .current .form-step-number { color: white; background: #2486e8; }
+.form-steps .done { color: #459780; }
+.form-steps .done .form-step-number { background: #eaf8f1; color: #25986f; }
+.form-step-arrow { margin-left: 12px; color: #c0cfe0; flex-shrink: 0; }
+
+.demo-form-content { flex: 1; min-height: 0; width: 100%; max-width: 1056px; margin: 0 auto; padding: 22px 28px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d5e4f5 transparent; }
+.form-upload { display: flex; align-items: center; gap: 13px; width: 100%; padding: 16px 18px; border: 1px dashed #b4cfef; border-radius: 11px; background: #f7fbff; color: #347cc9; text-align: left; }
+.form-upload:hover { border-color: #5e9fe6; background: #f0f7ff; }
+.document-upload-icon, .document-check { display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 42px; }
+.form-upload-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.form-upload-copy strong { font-size: 12px; font-weight: 600; }
+.form-upload-copy small { font-size: 10px; color: #8a9fb7; }
+.form-upload-cta { margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 500; padding: 8px 13px; background: white; border: 1px solid #d5e5f9; border-radius: 7px; }
+.form-document-note { font-size: 9px; color: #97a7bb; line-height: 1.7; margin: 8px 0 0; }
+.form-document-ready { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border: 1px solid #d8eee3; border-radius: 10px; background: #f6fcf9; }
+.document-check { color: #389d76; background: #e9f7ef; border-radius: 8px; }
+.form-document-ready > div { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; }
+.form-document-ready strong { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3c6c57; }
+.form-document-ready > div > span { font-size: 10px; line-height: 1.5; color: #85a392; }
+.form-text-button { flex-shrink: 0; padding: 6px 0 6px 10px; border: 0; background: none; color: #598574; font-size: 10px; }
+.ocr-warnings { font-size: 11px; line-height: 1.8; color: #a06c2f; background: #fff8e8; border-radius: 8px; padding: 10px 10px 10px 28px; margin: 12px 0 0; }
+.form-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin: 22px 0 18px; }
+.form-section-heading h3 { font-size: 14px; font-weight: 600; margin: 0 0 6px; color: #35577e; }
+.form-section-heading p { font-size: 10px; line-height: 1.7; margin: 0; color: #8a9fb8; }
+.form-completion { white-space: nowrap; padding: 6px 10px; border-radius: 6px; color: #6f91b7; background: #f0f6fc; font-size: 11px; }
+.form-completion.complete { color: #328a68; background: #eaf8f1; }
+.demo-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px 22px; }
+.demo-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 12px; }
+.demo-field > span { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 500; line-height: 1.6; }
+.demo-field small { font-size: 9px; color: #a4b2c2; font-weight: 400; white-space: nowrap; }
+.demo-field small.has-value { color: #529a7c; }
+.demo-field input, .demo-field textarea { width: 100%; border: 1px solid #dce7f3; border-radius: 8px; padding: 11px 13px; background: white; color: #3a5c80; font-size: 12px; line-height: 1.7; resize: vertical; }
+.demo-field textarea { min-height: 64px; max-height: 160px; }
+.demo-field input::placeholder, .demo-field textarea::placeholder { color: #a1b1c5; }
+.demo-field input:disabled, .demo-field textarea:disabled { opacity: 1; background: #f8fbfe; color: #597995; -webkit-text-fill-color: #597995; }
+.field-address, .field-request { grid-column: 1 / -1; }
+.field-wide { grid-column: 1 / -1; }
+.birth-form-group { min-width: 0; margin: 0 0 24px; padding: 18px; border: 1px solid #e1eaf6; border-radius: 12px; }
+.birth-form-group legend { padding: 0 7px; color: #294f7d; font-size: 13px; font-weight: 600; }
+.birth-form-group legend > span { display: inline-block; padding: 3px 6px; margin-right: 8px; border-radius: 5px; background: #edf5ff; color: #327fce; font-size: 10px; }
+.birth-group-note { color: #8398b1; font-size: 10px; line-height: 1.8; margin: 0 0 16px; }
+.birth-required { color: #db706b; font-weight: 500; margin-left: -3px; }
+.birth-form-group .demo-field > span { justify-content: flex-start; flex-wrap: wrap; }
+.birth-form-group .demo-field small { margin-left: auto; }
+.demo-field select { width: 100%; min-height: 44px; border: 1px solid #dce7f3; border-radius: 8px; padding: 11px 13px; background: white; color: #3a5c80; font-size: 12px; }
+.demo-field select:disabled { opacity: 1; background: #f8fbfe; color: #597995; }
+.field-current select { border-color: #83b7ef; background: #f2f8ff; }
+.field-current > span { color: #207fdf; }
+.field-current input, .field-current textarea { border-color: #83b7ef; background: #f2f8ff; box-shadow: 0 0 0 3px #2580ed09; }
+.field-current small { color: #3886d6; }
+.ocr-preview { border-top: 1px solid #edf2f9; padding-top: 13px; margin-top: 20px; font-size: 10px; }
+.ocr-preview summary { display: flex; align-items: center; gap: 6px; width: fit-content; cursor: pointer; color: #7f98b3; }
+.ocr-preview summary::before { content: '+'; font-size: 15px; margin-right: 2px; }
+.ocr-preview[open] summary::before { content: '−'; }
+.ocr-preview pre { max-height: 200px; overflow: auto; padding: 12px; background: #f8fbfe; border-radius: 7px; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.9 'Segoe UI', sans-serif; color: #637e9e; }
+
+/* Actions stay outside the scrollable fields. */
+.demo-form-footer { flex-shrink: 0; border-top: 1px solid #e5edf7; padding: 13px 28px 18px; background: #fff; }
+.form-next { display: flex; align-items: flex-start; gap: 8px; max-width: 1000px; margin: 0 auto 13px; color: #7393b5; }
+.form-next svg { flex-shrink: 0; margin-top: 1px; }
+.form-next p { margin: 0; font-size: 10px; line-height: 1.8; }
+.form-next.confirmed { color: #30956e; }
+.demo-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; max-width: 1000px; margin: 0 auto; }
+.form-draft-note { font-size: 9px; color: #a0aec0; }
+.form-action-buttons { display: flex; align-items: center; gap: 10px; }
+.form-action-buttons button { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 15px; border-radius: 8px; font-size: 11px; line-height: 1.7; min-height: 42px; }
+.form-secondary { color: #4e7ba9; background: white; border: 1px solid #d2e2f4; }
+.form-secondary:hover { background: #f5faff; }
+.form-confirm { color: white; border: 1px solid #2383e7; background: #2383e7; }
+.form-confirm:hover { background: #1675d7; }
+.form-confirm:disabled { opacity: 1; background: #edf2f8; border-color: #e8eef6; color: #a2b4c9; }
+
+@media (max-width: 1200px) {
+  .demo-form-header { padding-left: 22px; padding-right: 22px; }
+  .demo-form-title h2 { font-size: 19px; }
+  .demo-form-content { padding: 20px 22px; }
+  .demo-form-footer { padding-left: 22px; padding-right: 22px; }
+  .form-draft-note { display: none; }
+  .demo-form-actions { justify-content: flex-end; }
+  .form-steps { gap: 10px; }
+  .form-steps li { font-size: 10px; gap: 6px; }
+  .form-step-arrow { margin-left: 4px; }
+}
+@media (max-width: 900px) {
+  .demo-form-content { flex: none; overflow: visible; }
+}
+@media (max-width: 540px) {
+  .demo-form-header { padding: 18px 16px 0; }
+  .form-title-icon { width: 36px; height: 39px; border-radius: 9px; }
+  .demo-form-title { gap: 9px; }
+  .demo-form-title h2 { font-size: 17px; }
+  .demo-form-title p { font-size: 9px; }
+  .form-steps { gap: 8px; padding-top: 17px; }
+  .form-steps li { font-size: 9px; gap: 5px; }
+  .form-step-number { width: 21px; height: 21px; font-size: 9px; }
+  .form-step-arrow { width: 10px; margin-left: 1px; }
+  .demo-form-content { padding: 18px 16px; }
+  .form-upload { gap: 8px; padding: 12px 10px; }
+  .form-upload-copy strong { font-size: 11px; }
+  .form-upload-copy small { font-size: 9px; }
+  .form-upload-cta { padding: 7px 9px; font-size: 10px; }
+  .document-upload-icon { width: 28px; }
+  .demo-fields { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .demo-field input, .demo-field textarea { font-size: 14px; }
+  .form-section-heading p { max-width: 210px; }
+  .demo-form-footer { padding: 13px 16px 16px; }
+  .form-action-buttons { width: 100%; flex-wrap: wrap; }
+  .form-action-buttons button { flex: 1 1 150px; font-size: 11px; }
+  .form-document-ready { flex-wrap: wrap; }
+  .form-document-ready > div { flex-basis: calc(100% - 60px); }
+  .form-document-ready .form-text-button { padding-left: 0; margin-left: 50px; }
+}

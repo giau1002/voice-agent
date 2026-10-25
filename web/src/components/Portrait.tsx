@@ -1,82 +1,108 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import type { VoiceClient } from '../lib/voice-client';
 import type { LipSync } from '../lib/lip-sync';
-import { JawMotion } from '../lib/jaw-motion';
+import type { Avatar3D } from '../lib/avatar3d';
+import { Portrait2D, type PortraitOptions } from './Portrait2D';
+import type { RemoteTrack } from 'livekit-client';
+import framing from '../../public/avatar/live-framing.json';
+import { waitForPortraitFrame } from '../lib/video-readiness';
 
-export interface PortraitOptions { motion: boolean; intensity: number; jaw: number; delay: number }
-export function Portrait({ client, lips, options }: {
-  client: VoiceClient; lips: LipSync; options: PortraitOptions;
-}) {
+export type { PortraitOptions } from './Portrait2D';
+type Props = { client: VoiceClient; lips: LipSync; options: PortraitOptions; videoTrack?: RemoteTrack | null };
+
+export function Portrait(props: Props) {
+  if (props.videoTrack) return <LivePortrait track={props.videoTrack} />;
+  return props.options.mode === '3d' ? <Portrait3D {...props} /> : <Portrait2D {...props} />;
+}
+
+function LivePortrait({ track }: { track: RemoteTrack }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
+  const [left, top, right, bottom] = framing.crop;
+  useLayoutEffect(() => {
+    const element = video.current!;
+    setReady(false);
+    track.attach(element);
+    const stopWaiting = waitForPortraitFrame(element, () => setReady(true));
+    void element.play().catch(() => { /* Muted playback normally autostarts. */ });
+    return () => { stopWaiting(); track.detach(element); element.srcObject = null; };
+  }, [track]);
+  return <div className="portrait-wrap portrait-live" data-avatar-status={ready ? 'live' : 'loading'}>
+    <div className="portrait-live-stage" style={{
+      width: `max(100cqw, ${100 * framing.width / framing.height}cqh)`,
+      aspectRatio: `${framing.width} / ${framing.height}`,
+    }}>
+      <img className="portrait-live-photo" src="/avatar/portrait.png" alt="" />
+      {/* The GPU sees this entire head-and-shoulders crop. Restore its source
+          coordinates rather than stretching that square over the whole person.
+          The same cover transform as Portrait2D preserves framing on connection. */}
+      <video ref={video} autoPlay playsInline muted
+        style={{ left: `${100 * left / framing.width}%`, top: `${100 * top / framing.height}%`,
+          width: `${100 * (right-left) / framing.width}%`,
+          height: `${100 * (bottom-top) / framing.height}%`, opacity: ready ? 1 : 0,
+          transition: ready ? 'opacity .12s' : 'none' }}
+        aria-label="Nhân vật đang trò chuyện trực tiếp" />
+    </div>
+  </div>;
+}
+
+function Portrait3D({ client, lips, options }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const config = useRef(options); config.current = options;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [usePhoto, setUsePhoto] = useState(false);
 
   useEffect(() => {
-    let alive = true, frame = 0, renderer: RigRenderer | null = null;
-    const images: HTMLImageElement[] = [];
+    if (usePhoto) return;
+    let active = true, frame = 0, avatar: Avatar3D | null = null;
+    let observer: ResizeObserver | null = null;
+    const levels: { time: number; level: number }[] = [];
     async function setup() {
       try {
-        const loaded = await Promise.all(['portrait.png', 'colors.webp', 'flows.png', 'mouths.webp', 'character-layer.png'].map(file => new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image(); images.push(image);
-          image.onload = () => resolve(image); image.onerror = () => reject(new Error('Không tải được ảnh nhân vật.'));
-          image.src = `/avatar/${file}`;
-        })));
-        if (!alive || !canvas.current) return;
-        const [photo, motionAtlas, flowAtlas, mouthAtlas, characterLayer] = loaded;
-        const assets = { motionAtlas, flowAtlas, mouthAtlas, characterLayer, transparentBackground: false };
-        try { renderer = new window.PortraitRendering.PortraitRenderer(canvas.current, photo, assets); }
-        catch {
-          const old = canvas.current, next = old.cloneNode(true) as HTMLCanvasElement;
-          next.width = 280; next.height = 350;
-          old.replaceWith(next); canvas.current = next;
-          renderer = new window.PortraitRendering.PortraitRenderer(next, photo, { ...assets, forceSoftware: true });
-        }
+        const { Avatar3D } = await import('../lib/avatar3d');
+        if (!active || !canvas.current) return;
+        const next = await Avatar3D.create(canvas.current);
+        if (!active) { next.dispose(); return; }
+        avatar = next;
+        observer = new ResizeObserver(() => avatar?.resize());
+        observer.observe(canvas.current.parentElement!);
+        avatar.resize();
         setLoading(false);
-        const blink = new window.PortraitCore.BlinkController({ min: 2000, max: 3000, duration: 190 });
-        const motion = new window.PortraitGentleMotion.GentleMotion();
-        const core = window.PortraitCore;
-        const jaw = new JawMotion();
-        let weights = core.pose('rest'), last = performance.now(), heardAt = -Infinity;
-        let lastMotion = config.current.motion, lastIntensity = config.current.intensity;
-        motion.enabled = lastMotion; motion.setIntensity(lastIntensity, last);
-        const levels: { time: number; level: number }[] = [];
+        let last = performance.now();
         function tick(now: number) {
-          if (!alive || !renderer) return;
+          if (!active || !avatar) return;
           const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now;
-          const cfg = config.current, level = client.meter.sample();
-          if (level > .015) heardAt = now;
-          levels.push({ time: now, level }); while (levels[0]?.time < now - 400) levels.shift();
+          const cfg = config.current;
+          const level = client.meter.sample();
+          levels.push({ time: now, level });
+          while (levels[0]?.time < now - 400) levels.shift();
           const shifted = levels.findLast(item => item.time <= now - cfg.delay)?.level ?? 0;
-          const speaking = client.speaking;
-          const sample = lips.sample(now - cfg.delay, shifted, speaking);
-          weights = core.smoothPose(weights, sample.weights, dt);
-          // Smooth the complete jaw target once. Pose smoothing still handles
-          // lip width and smile, but must not add a second delay to the jaw.
-          const mouthTarget = window.PortraitRendering.controls(sample.weights, 0, {
-            jawDepth: cfg.jaw, articulation: sample.articulation,
-          })[0];
-          const mouthOpening = jaw.update(mouthTarget, dt);
-          if (cfg.motion !== lastMotion) { motion.setEnabled(cfg.motion, now); lastMotion = cfg.motion; }
-          if (cfg.intensity !== lastIntensity) { motion.setIntensity(cfg.intensity, now); lastIntensity = cfg.intensity; }
-          const body = motion.update(now, { speaking: speaking && now - heardAt < 450, reduced: document.hidden });
-          renderer.render(weights, blink.update(now), false, false, {
-            ...body, jawDepth: cfg.jaw, articulation: sample.articulation, mouthOpening,
+          const sample = lips.sample(now - cfg.delay, shifted, client.speaking);
+          avatar.update(now, dt, {
+            weights: sample.weights, articulation: sample.articulation, jaw: cfg.jaw,
+            speaking: client.speaking, level: shifted,
+            motion: cfg.motion, intensity: cfg.intensity, reduced: document.hidden,
           });
-          if (renderer.lost) setError('Bộ vẽ đã bị gián đoạn. Tải lại trang để khôi phục.');
           frame = requestAnimationFrame(tick);
         }
         frame = requestAnimationFrame(tick);
-      } catch (exception) { if (alive) { setError(exception instanceof Error ? exception.message : 'Không tải được nhân vật.'); setLoading(false); } }
+      } catch (exception) {
+        if (active) {
+          setError(exception instanceof Error ? exception.message : 'Không tải được nhân vật 3D.');
+          setLoading(false);
+        }
+      }
     }
     void setup();
-    return () => { alive = false; cancelAnimationFrame(frame); images.forEach(image => { image.onload = null; image.onerror = null; }); };
-  }, [client, lips]);
+    return () => { active = false; cancelAnimationFrame(frame); observer?.disconnect(); avatar?.dispose(); };
+  }, [client, lips, usePhoto]);
 
-  return <div className="portrait-wrap">
-    <canvas ref={canvas} width={560} height={700} aria-label="Nhân vật trợ lý chuyển động theo giọng trả lời" />
-    {loading && <div className="portrait-cover"><LoaderCircle className="spin" />Đang chuẩn bị nhân vật</div>}
-    {error && <div className="portrait-cover error" role="alert">{error}</div>}
+  if (usePhoto) return <Portrait2D client={client} lips={lips} options={options} />;
+  return <div className="portrait-wrap portrait-3d" data-avatar-status={error ? 'error' : loading ? 'loading' : 'ready'}>
+    <canvas ref={canvas} aria-label="Nhân vật trợ lý 3D chuyển động theo giọng trả lời" />
+    {loading && <div className="portrait-cover"><LoaderCircle className="spin" />Đang chuẩn bị nhân vật 3D</div>}
+    {error && <div className="portrait-cover error" role="alert"><span>{error}</span><button type="button" className="save-settings" onClick={() => setUsePhoto(true)}>Dùng nhân vật từ ảnh</button></div>}
   </div>;
 }

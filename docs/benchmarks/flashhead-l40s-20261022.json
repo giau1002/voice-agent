@@ -1,0 +1,216 @@
+{
+  "schema": "flashhead-feasibility-v1",
+  "execution_ok": true,
+  "system": "Windows-10-10.0.26100-SP0",
+  "python": "3.10.19",
+  "scope": "warm single-GPU chunk benchmark and recorded quality sample; not an end-to-end chatbot benchmark",
+  "source_revision": "9bc03de06bb0de82cd6bc477804512ae06144bf2",
+  "audio_seconds": 6.495375,
+  "input_crop": [
+    125,
+    25,
+    445,
+    345
+  ],
+  "quality_accepted": null,
+  "livekit_integrated": false,
+  "av_sync_measured_in_browser": false,
+  "attention": "upstream PyTorch SDPA fallback; torch.compile disabled",
+  "gpu": "NVIDIA L40S",
+  "torch": "2.7.1+cu128",
+  "free_before_mib": 18429.1875,
+  "allocator_limit_mib": 16381.1875,
+  "model_load_seconds": 5.4450749000534415,
+  "portrait_prepare_seconds": 0.38200460001826286,
+  "output_fps": 25,
+  "output_frames_per_chunk": 24,
+  "chunk_seconds": 0.96,
+  "warmup_seconds": 0.4438758995383978,
+  "trials": [
+    {
+      "chunks": [
+        {
+          "index": 0,
+          "offset_samples": 0,
+          "valid_samples": 15360,
+          "audio_features_s": 0.007965699769556522,
+          "generate_s": 0.27678100019693375,
+          "cpu_transfer_s": 0.0011913003399968147,
+          "processing_s": 0.2859380003064871
+        },
+        {
+          "index": 1,
+          "offset_samples": 15360,
+          "valid_samples": 15360,
+          "audio_features_s": 0.00682349968701601,
+          "generate_s": 0.2768072998151183,
+          "cpu_transfer_s": 0.0011670999228954315,
+          "processing_s": 0.28479789942502975
+        },
+        {
+          "index": 2,
+          "offset_samples": 30720,
+          "valid_samples": 15360,
+          "audio_features_s": 0.00644300039857626,
+          "generate_s": 0.28424479998648167,
+          "cpu_transfer_s": 0.0011416999623179436,
+          "processing_s": 0.29182950034737587
+        },
+        {
+          "index": 3,
+          "offset_samples": 46080,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006205599755048752,
+          "generate_s": 0.27835190016776323,
+          "cpu_transfer_s": 0.0011261003091931343,
+          "processing_s": 0.2856836002320051
+        },
+        {
+          "index": 4,
+          "offset_samples": 61440,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006708200089633465,
+          "generate_s": 0.27549829985946417,
+          "cpu_transfer_s": 0.0011579999700188637,
+          "processing_s": 0.2833644999191165
+        },
+        {
+          "index": 5,
+          "offset_samples": 76800,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006452799774706364,
+          "generate_s": 0.27200020011514425,
+          "cpu_transfer_s": 0.0011529000476002693,
+          "processing_s": 0.2796058999374509
+        },
+        {
+          "index": 6,
+          "offset_samples": 92160,
+          "valid_samples": 11766,
+          "audio_features_s": 0.006493000313639641,
+          "generate_s": 0.2743426999077201,
+          "cpu_transfer_s": 0.0023086005821824074,
+          "processing_s": 0.28314430080354214
+        }
+      ],
+      "render_fps_including_features_and_transfer": 84.23739356979114,
+      "rtf_compute_over_output": 0.29678031264449517,
+      "p95_chunk_s": 0.29006205033510923,
+      "pcm_at_1x_simulation": {
+        "scope": "simulation; excludes encoder, network, WebRTC and browser",
+        "input": "PCM arrives at 1x realtime",
+        "first_paired_av_ready_s": 1.245938000306487,
+        "first_paired_playout_s": 1.3659380003064872,
+        "buffer_s": 0.12,
+        "total_stall_s": 0.0,
+        "stall_events": 0,
+        "buffer_needed_for_this_sample_s": 0.005891500040888786
+      },
+      "pcm_ready_upfront_simulation": {
+        "scope": "simulation; excludes encoder, network, WebRTC and browser",
+        "input": "all PCM ready at t=0",
+        "first_paired_av_ready_s": 0.2859380003064871,
+        "first_paired_playout_s": 0.4059380003064871,
+        "buffer_s": 0.12,
+        "total_stall_s": 0.0,
+        "stall_events": 0,
+        "buffer_needed_for_this_sample_s": 0.0
+      }
+    },
+    {
+      "chunks": [
+        {
+          "index": 0,
+          "offset_samples": 0,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006795699708163738,
+          "generate_s": 0.2775459997355938,
+          "cpu_transfer_s": 0.001271500252187252,
+          "processing_s": 0.2856131996959448
+        },
+        {
+          "index": 1,
+          "offset_samples": 15360,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006526200100779533,
+          "generate_s": 0.27373209968209267,
+          "cpu_transfer_s": 0.0011972999200224876,
+          "processing_s": 0.2814555997028947
+        },
+        {
+          "index": 2,
+          "offset_samples": 30720,
+          "valid_samples": 15360,
+          "audio_features_s": 0.00668449979275465,
+          "generate_s": 0.27387790009379387,
+          "cpu_transfer_s": 0.0011285999789834023,
+          "processing_s": 0.2816909998655319
+        },
+        {
+          "index": 3,
+          "offset_samples": 46080,
+          "valid_samples": 15360,
+          "audio_features_s": 0.00651829969137907,
+          "generate_s": 0.2743782000616193,
+          "cpu_transfer_s": 0.0011281995102763176,
+          "processing_s": 0.28202469926327467
+        },
+        {
+          "index": 4,
+          "offset_samples": 61440,
+          "valid_samples": 15360,
+          "audio_features_s": 0.0066648004576563835,
+          "generate_s": 0.27673299983143806,
+          "cpu_transfer_s": 0.0011435002088546753,
+          "processing_s": 0.2845413004979491
+        },
+        {
+          "index": 5,
+          "offset_samples": 76800,
+          "valid_samples": 15360,
+          "audio_features_s": 0.006831200793385506,
+          "generate_s": 0.2752629993483424,
+          "cpu_transfer_s": 0.0011806003749370575,
+          "processing_s": 0.283274800516665
+        },
+        {
+          "index": 6,
+          "offset_samples": 92160,
+          "valid_samples": 11766,
+          "audio_features_s": 0.006979100406169891,
+          "generate_s": 0.27015579957515,
+          "cpu_transfer_s": 0.0011584004387259483,
+          "processing_s": 0.27829330042004585
+        }
+      ],
+      "render_fps_including_features_and_transfer": 84.981798974241,
+      "rtf_compute_over_output": 0.29418063987534315,
+      "p95_chunk_s": 0.2852916299365461,
+      "pcm_at_1x_simulation": {
+        "scope": "simulation; excludes encoder, network, WebRTC and browser",
+        "input": "PCM arrives at 1x realtime",
+        "first_paired_av_ready_s": 1.2456131996959448,
+        "first_paired_playout_s": 1.3656131996959449,
+        "buffer_s": 0.12,
+        "total_stall_s": 0.0,
+        "stall_events": 0,
+        "buffer_needed_for_this_sample_s": 0.0
+      },
+      "pcm_ready_upfront_simulation": {
+        "scope": "simulation; excludes encoder, network, WebRTC and browser",
+        "input": "all PCM ready at t=0",
+        "first_paired_av_ready_s": 0.2856131996959448,
+        "first_paired_playout_s": 0.4056131996959448,
+        "buffer_s": 0.12,
+        "total_stall_s": 0.0,
+        "stall_events": 0,
+        "buffer_needed_for_this_sample_s": 0.0
+      }
+    }
+  ],
+  "review_frames_decoded": 163,
+  "review_encode_verify_s": 1.1956048998981714,
+  "torch_peak_reserved_mib": 5668.0,
+  "torch_peak_allocated_mib": 5097.37841796875,
+  "total_wall_s": 27.581964999437332
+}

@@ -17,6 +17,7 @@ from livekit import api
 from pydantic import BaseModel, Field
 
 from .config import ROOT, Settings, get_settings
+from .ocr import MAX_UPLOAD_BYTES, OcrError, extract_document, validate_document
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.rate_buckets = defaultdict(deque)
     app.state.issued_sessions = {}
+    app.state.ocr_slots = asyncio.Semaphore(2)
     app.add_middleware(
         CORSMiddleware, allow_origins=settings.origins,
         allow_methods=["GET", "POST", "DELETE"],
@@ -104,10 +106,42 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "missing": settings.missing_configuration,
             "language": settings.soniox_tts_language,
             "session_max_seconds": settings.session_max_seconds,
-            "lip_sync": "audio + synchronized text; phonemes estimated",
+            "lip_sync": ("FlashHead Lite audio-driven video" if settings.avatar_mode == "flashhead"
+                         else "audio + synchronized text; phonemes estimated"),
             "timezone": settings.agent_timezone,
             "web_search": settings.can_search_web,
+            "avatar_mode": settings.avatar_mode,
+            "ocr_enabled": bool(settings.gemini_api_key.get_secret_value()),
         }
+
+    @app.post("/api/documents/ocr", dependencies=[Depends(authorize)])
+    async def ocr_document(request: Request):
+        # Raw bytes avoid buffering unbounded multipart uploads or writing personal files to disk.
+        if not settings.gemini_api_key.get_secret_value():
+            raise HTTPException(503, "OCR cần GEMINI_API_KEY trong .env của server.")
+        now = time.monotonic()
+        key = "ocr:" + (request.client.host if request.client else "unknown")
+        bucket = app.state.rate_buckets[key]
+        while bucket and now - bucket[0] > 60:
+            bucket.popleft()
+        if len(bucket) >= 6:
+            raise HTTPException(429, "OCR quá nhanh. Anh/chị chờ một phút rồi thử lại.")
+        if app.state.ocr_slots.locked():
+            raise HTTPException(429, "OCR đang bận. Anh/chị thử lại sau ít giây.")
+        bucket.append(now)
+        async with app.state.ocr_slots:
+            data = bytearray()
+            async for chunk in request.stream():
+                if len(data) + len(chunk) > MAX_UPLOAD_BYTES:
+                    raise HTTPException(413, "Tệp cần nhỏ hơn hoặc bằng 8 MB.")
+                data.extend(chunk)
+            mime = request.headers.get("content-type", "").split(";")[0].strip().lower()
+            try:
+                payload = bytes(data)
+                await asyncio.to_thread(validate_document, payload, mime)
+                return await extract_document(settings, payload, mime)
+            except OcrError as error:
+                raise HTTPException(error.status, error.message) from None
 
     @app.post("/api/sessions", dependencies=[Depends(authorize)])
     async def create_session(body: SessionRequest, request: Request):

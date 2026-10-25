@@ -8,10 +8,17 @@ gọi người dùng là **anh/chị**, giao tiếp lịch sự, rõ ràng và t
 được cấu hình trong `prompts/system.md`; lời chào đầu phiên đặt bằng `AGENT_GREETING`.
 
 Project độc lập, tích hợp luồng voice từ `kiosk-voice-agent` và bộ vẽ nhân vật
-Portrait Motion Studio V13. Không cần backend GPU để vẽ avatar. Silero VAD là
+Portrait Motion Studio V13. Chế độ ảnh 2D vẽ avatar trên trình duyệt; chế độ
+**FlashHead Lite** dựng video trực tiếp trên server GPU NVIDIA và phát qua LiveKit.
+Mẫu thử trên L40S đạt 84–85 FPS dựng ở video 25 FPS, đã được người dùng duyệt.
+Xem [báo cáo tích hợp](docs/FLASHHEAD_LIVE_INTEGRATION.md) và
+[hướng dẫn deploy GPU](deploy/avatar-flashhead/LIVE.md). Silero VAD là
 phần ML chạy trên CPU; STT, LLM và TTS mặc định gọi dịch vụ qua mạng.
 
 ## Chạy trên Windows
+
+Đưa cả ứng dụng lên máy GPU đã có FlashHead: xem
+[hướng dẫn chạy cùng máy GPU Windows](docs/DEPLOY_GPU_WINDOWS.md).
 
 ```powershell
 git clone https://github.com/giau1002/voice-agent.git
@@ -38,24 +45,57 @@ powershell -ExecutionPolicy Bypass -File scripts/start.ps1
 ```
 
 Mở **http://127.0.0.1:8790** → **Bắt đầu trò chuyện** → cho phép micro.
-Có thể nhập tin nhắn khi không có micro. Nút **Ngắt lời** hoặc nói qua micro
+Nút **Ngắt lời** hoặc nói qua micro
 để dừng câu trả lời hiện tại. Ctrl+C tại cửa sổ chạy script để dừng các tiến trình.
 Log nằm trong `logs/`, không được commit.
 
-Giao diện xanh–trắng đặt nhân vật cùng nền ảnh gốc bên trái và chatbot bên phải.
-Khung chat hiển thị lời nói đang nhận, câu trả lời và cho phép nhập tin nhắn;
-các câu hỏi gợi ý giúp bắt đầu cuộc trò chuyện. Màn hình nhỏ chuyển thành bố cục
-dọc. Độ há hàm mặc định **150%**, có thể chỉnh tới **180%**; điều chỉnh micro, loa và chuyển động tại nút
-cài đặt. Ảnh nhân vật không có chữ phủ hay nút chớp mắt; chớp mắt tự động vẫn
-hoạt động. Phần đầu khung trò chuyện có nền xanh, chữ trắng và avatar tròn.
-Trợ lý hiện chưa kết nối cổng dịch vụ công hay kho mẫu đơn chính thức.
+Giao diện kiosk giữ nhân vật lớn bên trái, phần hướng dẫn thủ tục bên phải;
+không có khung chat hay ô nhập tin nhắn. Bấm **Bắt đầu trò chuyện**, nói tên
+thủ tục hoặc chạm một nội dung gợi ý để nghe hướng dẫn. Trợ lý hỏi thông tin
+cần làm rõ và tra cứu trước khi đưa hướng dẫn thủ tục hiện hành.
 
-Khung hỗ trợ có avatar tròn, bong bóng hội thoại, giờ gửi và bốn ô gợi ý. Các ô
-tra cứu hồ sơ hoặc đặt lịch mở câu hỏi hướng dẫn, không thực hiện tra cứu hồ sơ
-hay đặt lịch trực tiếp. Nút **Kết nối** ở đầu khung mở/đóng cuộc trò chuyện; nút
-micro trong thanh nhập có thể bắt đầu kết nối giọng nói. Nút kẹp giấy chèn nội
-dung tệp `.txt` / `.md` vào bản nháp để người dùng xem trước; tối đa 2.000 ký tự
-cho toàn bộ tin nhắn, chưa có chức năng tải lên PDF hoặc ảnh.
+Sau khi được hướng dẫn, nói **“Mở biểu mẫu giúp tôi”** hoặc bấm **Mở biểu mẫu**.
+Công cụ `open_birth_form` mở tờ khai ngay bên cạnh nhân vật; hỏi về một thủ tục
+không tự mở form. Nói **“Đóng biểu mẫu”** để trở lại hướng dẫn, giữ bản nháp
+trong phiên. Biểu mẫu hiện có là **Tờ khai đăng ký khai sinh**, gồm thông tin
+trẻ, cha mẹ và người đi đăng ký; chưa kết nối tiếp nhận hồ sơ thực tế.
+Màn hình nhỏ chuyển thành bố cục dọc. Độ há hàm mặc định **150%**, tối đa
+**180%**; chỉnh micro, loa và chuyển động tại nút cài đặt.
+
+## OCR và hỏi đáp điền form
+
+Mở biểu mẫu rồi chọn **Tải PDF hoặc hình ảnh**, tải PDF (kể cả bản scan)
+hoặc ảnh JPG/PNG/WebP tối đa **8 MB**; ảnh tối đa 20 megapixel. OCR dùng
+`GEMINI_API_KEY` trên server và `OCR_MODEL=gemini-2.5-flash`, độc lập với
+nhà cung cấp LLM hội thoại. Tệp được gửi dạng inline tới Gemini, không lưu vào
+ổ đĩa của ứng dụng. Tệp lỗi, PDF khóa hoặc chữ không đọc được có thông báo để thử lại.
+
+Mẫu **Tờ khai đăng ký khai sinh** trong ứng dụng có 21 ô, chia thành ba nhóm:
+thông tin trẻ; thông tin cha mẹ; thông tin người đi đăng ký. Có tám mục chính
+để hoàn thành tờ khai: tên trẻ, ngày sinh, giới tính, nơi sinh, tên mẹ, tên
+người đăng ký, quan hệ với trẻ và địa chỉ người đăng ký. Các mục như thông tin
+cha, ngày sinh cha mẹ, dân tộc, quốc tịch, quê quán, giấy tờ tùy thân, điện thoại
+và nơi đăng ký dự kiến là bổ sung. Các mục chính được đánh dấu trên giao diện.
+
+OCR chỉ điền thông tin nhìn thấy và xác định được đúng vai trò, để trống mục chưa rõ;
+cụ thể, tên mẹ trên giấy chứng sinh không tự biến thành tên trẻ hoặc tên người đăng ký.
+Ngày sinh được kiểm tra lịch và chuẩn hóa; ngày không hợp lệ được để trống kèm cảnh báo.
+Có thể mở **Đối chiếu văn bản từ tài liệu** để kiểm tra. Tải thêm tài liệu bổ sung thông tin
+OCR và giữ các mục đã sửa bằng tay. Nếu OCR lỗi, bản nháp hiện có vẫn được giữ.
+
+1. Kiểm tra thông tin đã nhận, sửa trực tiếp nếu cần.
+2. Trợ lý hỏi từng mục còn thiếu bằng giọng nói và cập nhật phiếu bằng công cụ
+   `update_birth_form`. Sau OCR, phiếu tự đồng bộ để tiếp tục hỏi đáp nếu đang kết nối.
+3. Có thể nói yêu cầu sửa thông tin. Muốn sửa trực tiếp, chọn **Dừng hỏi đáp để chỉnh sửa**.
+   Tải thêm tài liệu sẽ tạm dừng hỏi đáp, đọc thông tin rồi tự tiếp tục.
+4. Khi đủ thông tin, kiểm tra rồi xác nhận bằng lời hoặc nút **Xác nhận tờ khai**.
+
+Đây là tờ khai khai sinh, chưa gửi hồ sơ đến cơ quan nào. Trợ lý gọi đúng
+tên tờ khai và xác nhận ngắn thông tin đã cập nhật.
+Dữ liệu form chỉ nằm trong bộ nhớ tab/phiên LiveKit; tải lại trang sẽ mất bản nháp.
+Khi ngắt kết nối, hỏi đáp dừng và bản nháp trên tab vẫn giữ để tiếp tục ở phiên mới.
+API `/api/documents/ocr` dùng cùng mã truy cập/kiểm tra origin như API tạo phiên,
+giới hạn 6 yêu cầu/phút/IP và tối đa 2 lượt OCR đồng thời mỗi tiến trình.
 
 ## Ngày giờ và thông tin thực tế
 
@@ -65,11 +105,27 @@ thứ, giờ mới từ đồng hồ server theo `AGENT_TIMEZONE=Asia/Ho_Chi_Min
 đồng bộ giờ hệ thống chính xác. Dependency `tzdata` hỗ trợ múi giờ trên Windows.
 
 `WEB_SEARCH_ENABLED=true` bật công cụ tra cứu theo yêu cầu bằng Gemini + Google
-Search, sử dụng `GEMINI_API_KEY` hiện có và `WEB_SEARCH_MODEL=gemini-2.5-flash`.
+Search, sử dụng `GEMINI_API_KEY` hiện có và `WEB_SEARCH_MODEL=gemini-3.1-flash-lite`.
 Công cụ dùng được cả khi LLM chính là Gemini, OpenAI hoặc local. Tin mới, thời
 tiết, giá cả, người đương nhiệm và quy định hiện hành cần tra cứu; hỏi ngày giờ
 hoặc trò chuyện thông thường không cần gọi web. Search có thể phát sinh phí theo
 tài khoản Gemini và mất thêm thời gian khi truy vấn.
+
+Ưu tiên phản hồi nhanh: nhu cầu ban đầu chưa rõ địa phương được hỏi lại ngay;
+cách dùng kiosk và điền biểu mẫu không gọi web. Câu hỏi tiếp nối dùng lại nguồn
+đã xác minh trong hội thoại khi đủ căn cứ. Truy vấn giống nhau được lưu tối đa
+90 giây, riêng từng phiên, tối đa 8 kết quả thành công; lỗi không được lưu.
+Khi cần tra cứu lâu, trợ lý nói một câu báo đang kiểm tra. Mỗi lần tra cứu có
+giới hạn `WEB_SEARCH_TIMEOUT_SECONDS=8`, không tự thử lại; hết thời gian thì nói
+rõ chưa xác minh được, không đoán phí hay quy định hiện hành.
+
+`GEMINI_FAST_RESPONSES=true` giảm mức suy luận bằng tham số phù hợp với dòng
+Gemini đang dùng, cho cả hội thoại và tìm kiếm. Đặt `false` để dùng mặc định của
+nhà cung cấp. `SONIOX_MAX_ENDPOINT_DELAY_MS=700` giảm thời gian chốt lượt nói;
+nếu thường ngắt giữa câu khi nói chậm, tăng lại 1000. Các thay đổi cần khởi động
+lại worker và kết nối phiên mới. Log `Voice turn latency` ghi riêng thời gian
+nhận dạng, chốt lượt, token/câu đầu, TTS và phát tiếng; `Web lookup completed`
+ghi thời gian tra cứu. Các log này không ghi nội dung hội thoại hay câu truy vấn.
 
 Khung chat hiển thị nguồn và gợi ý tìm kiếm do nhà cung cấp trả về. Chỉ kết quả có
 grounding metadata và nguồn thực mới được xác nhận; lỗi tra cứu trả trạng thái
@@ -126,10 +182,16 @@ flowchart LR
   phải mô hình LLM. `turn_detection="stt"` dùng endpoint của Soniox để chốt câu.
 - Repo mẫu dùng **Soniox**, không phải Cartesia Sonic. TTS mặc định Soniox
   `tts-rt-v1-preview`, voice `Nina`, tiếng Việt. Có thể đổi model/voice bằng `.env`.
+- STT mặc định `stt-rt-v5`. Worker nhận micro ở 16 kHz mono, khung 20 ms, khớp
+  đầu vào Soniox. Nếu cấu hình cũ còn `SONIOX_STT_MODEL=stt-rt-v4`, có thể đổi
+  sang `stt-rt-v5` rồi khởi động lại worker. Log `Microphone audio received`,
+  `Microphone signal detected` và `Speech recognition finalized` phân biệt
+  đường truyền micro với dịch vụ nhận dạng; chỉ ghi thông số và độ dài, không
+  ghi nội dung nói hay lưu bản ghi âm.
 - LLM: `gemini`, `openai`, hoặc `local`. Local cần `LLM_BASE_URL` và `LLM_MODEL`.
   `LLM_PROVIDER=local` hỗ trợ endpoint OpenAI-compatible như Ollama/vLLM.
 - Prompt nằm ở [`prompts/system.md`](prompts/system.md), được đọc phía worker.
-  Chưa mang nghiệp vụ eForm, OCR, dữ liệu công dân hoặc catalog của repo mẫu sang.
+  Có OCR và eForm; chưa kết nối dữ liệu công dân hoặc catalog nghiệp vụ chính thức.
 - Token server tạo identity/phòng ngẫu nhiên, chỉ cấp quyền join phòng đó,
   publish microphone/data và subscribe. Named dispatch gọi worker `portrait-voice`.
 - API không gửi khóa Soniox, Gemini, OpenAI hoặc LiveKit secret xuống browser.

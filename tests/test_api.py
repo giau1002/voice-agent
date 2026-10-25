@@ -25,6 +25,18 @@ def test_config_never_exposes_provider_secrets():
     assert result.headers["Cache-Control"] == "no-store"
 
 
+def test_avatar_configuration_exposes_mode_but_not_gpu_credentials():
+    config = settings(avatar_mode='flashhead', avatar_renderer_url='http://gpu.internal:8890',
+                      avatar_renderer_token='private-renderer-key-'*3)
+    result = TestClient(create_app(config)).get('/api/config')
+    assert result.json()['avatar_mode'] == 'flashhead'
+    assert result.json()['configured']
+    assert 'gpu.internal' not in result.text and 'private-renderer-key' not in result.text
+    missing = settings(avatar_mode='flashhead').missing_configuration
+    assert 'AVATAR_RENDERER_URL' in missing
+    assert any('AVATAR_RENDERER_TOKEN' in name for name in missing)
+
+
 def test_missing_config_blocks_token_creation():
     config = Settings(_env_file=None, app_env="test")
     client = TestClient(create_app(config))

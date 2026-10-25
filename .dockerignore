@@ -2,8 +2,11 @@
 .env
 .venv
 .tools
+.cache
 logs
 artifacts
+tmp
+output
 web/node_modules
 web/dist
 **/__pycache__
