@@ -15,6 +15,7 @@ interface Config {
   avatar_mode?: 'photo' | 'flashhead';
 }
 const stateLabels: Record<AgentState, string> = { idle: 'Sẵn sàng trò chuyện', initializing: 'Đang gọi trợ lý', listening: 'Em đang lắng nghe', thinking: 'Đang chuẩn bị hướng dẫn', speaking: 'Trợ lý đang nói' };
+const ocrSyncWarning = 'Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.';
 
 export default function App() {
   const [link, setLink] = useState<LinkState>('offline');
@@ -43,6 +44,7 @@ export default function App() {
   const ocrAbort = useRef<AbortController | null>(null);
   const serverFormRevision = useRef(0);
   const localOcrDraft = useRef(false);
+  const pendingOcrSync = useRef<DemoFormState | null>(null);
   const resumeFormOnReady = useRef(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [input, setInput] = useState(''); const [output, setOutput] = useState('');
@@ -64,14 +66,23 @@ export default function App() {
     ended: () => {
       lips.clear(); setPlayback(true);
       serverFormRevision.current = 0;
+      pendingOcrSync.current = null;
       setForm(current => ({ ...current, active: false, revision: 0 }));
     },
     video: setAvatarVideo,
     form: state => {
       serverFormRevision.current = Math.max(serverFormRevision.current, state.revision);
-      // Keep an uploaded draft intact while OCR/synchronization is in progress.
-      if (ocrAbort.current || localOcrDraft.current) return;
       if (state.revision < formSnapshot.current.revision) return;
+      if (localOcrDraft.current) {
+        // An RPC can time out even though the worker applies it later. Accept
+        // that acknowledgement only after it contains our uploaded draft.
+        const pending = pendingOcrSync.current;
+        if (!pending || !state.active || state.revision <= pending.revision
+          || !(Object.keys(formSnapshot.current.fields) as FormKey[]).every(key =>
+            !formSnapshot.current.fields[key] || state.fields[key] === formSnapshot.current.fields[key])) return;
+        localOcrDraft.current = false; pendingOcrSync.current = null;
+        setOcrWarnings(current => current.filter(warning => warning !== ocrSyncWarning));
+      }
       formSnapshot.current = state; setForm(state); setFormOpen(state.visible);
     },
   }));
@@ -165,6 +176,7 @@ export default function App() {
     const original = formSnapshot.current;
     const draft = { ...original, active: false };
     localOcrDraft.current = true;
+    pendingOcrSync.current = null;
     saveDraft(draft);
     // A slow or failed voice RPC must not prevent the HTTP upload from starting.
     const pause = original.active && client.connected
@@ -194,11 +206,17 @@ export default function App() {
         try {
           await pause;
           if (controller.signal.aborted) return;
-          const synced = await client.formCommand('start', { ...updated, revision: serverFormRevision.current });
+          const request = { ...updated, revision: serverFormRevision.current };
+          pendingOcrSync.current = request;
+          const synced = await client.formCommand('start', request);
           if (controller.signal.aborted) return;
-          localOcrDraft.current = false; saveDraft(synced); setFormOpen(synced.visible);
+          localOcrDraft.current = false; pendingOcrSync.current = null;
+          // A tool update may arrive before the older RPC response.
+          if (synced.revision >= formSnapshot.current.revision) {
+            saveDraft(synced); setFormOpen(synced.visible);
+          }
         } catch {
-          setOcrWarnings([...result.warnings, 'Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.']);
+          if (localOcrDraft.current) setOcrWarnings([...result.warnings, ocrSyncWarning]);
         } finally { setFormBusy(false); }
       } else localOcrDraft.current = false;
     } catch (exception) {

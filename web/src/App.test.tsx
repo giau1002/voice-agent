@@ -188,6 +188,52 @@ it('starts the upload and shows extracted fields before a slow voice pause finis
   expect(screen.getByRole('textbox', { name: /^Họ tên mẹ/ })).toHaveValue('Nguyễn Thu An');
 });
 
+it('accepts a late OCR synchronization and subsequent spoken answers after an RPC timeout', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 1 }));
+  mocks.formCommand.mockRejectedValue(new Error('Request timed out'));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    text: 'Mẹ: Nguyễn Thu An', fields: { mother_name: 'Nguyễn Thu An' }, warnings: [],
+  }))));
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'giay-to.png')] } });
+  await screen.findByText('Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.');
+  const synced = { ...emptyForm(), visible: true, active: true, revision: 3,
+    fields: { ...emptyForm().fields, mother_name: 'Nguyễn Thu An' }, sources: { mother_name: 'ocr' as const } };
+  act(() => mocks.events?.form?.(synced));
+  expect(screen.getByRole('button', { name: 'Dừng hỏi đáp để chỉnh sửa' })).toBeInTheDocument();
+  act(() => mocks.events?.form?.({ ...synced, revision: 4,
+    fields: { ...synced.fields, full_name: 'Trần Văn Bình', phone: '0355106937' },
+    sources: { ...synced.sources, full_name: 'user', phone: 'user' } }));
+  expect(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ })).toHaveValue('Trần Văn Bình');
+  expect(screen.getByRole('textbox', { name: /^Số điện thoại liên hệ/ })).toHaveValue('0355106937');
+  expect(screen.queryByText('Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.')).not.toBeInTheDocument();
+});
+
+it('keeps a spoken answer that arrives before the OCR resume RPC response', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 1 }));
+  let finishResume!: (state: DemoFormState) => void;
+  let synced!: DemoFormState;
+  mocks.formCommand.mockImplementation((action: string, state: DemoFormState) => {
+    const next = { ...state, active: action === 'start', revision: state.revision + 1 };
+    mocks.events?.form?.(next);
+    if (action === 'stop') return Promise.resolve(next);
+    synced = next;
+    return new Promise(resolve => { finishResume = resolve; });
+  });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    text: 'Mẹ: Nguyễn Thu An', fields: { mother_name: 'Nguyễn Thu An' }, warnings: [],
+  }))));
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'giay-to.png')] } });
+  await screen.findByRole('button', { name: 'Dừng hỏi đáp để chỉnh sửa' });
+  await act(async () => {
+    mocks.events?.form?.({ ...synced, revision: synced.revision + 1,
+      fields: { ...synced.fields, full_name: 'Trần Văn Bình' }, sources: { ...synced.sources, full_name: 'user' } });
+    finishResume(synced);
+  });
+  expect(screen.getByRole('textbox', { name: /^Họ tên người đi đăng ký/ })).toHaveValue('Trần Văn Bình');
+});
+
 it('shows a useful upload error for a non-JSON server response', async () => {
   render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Mở biểu mẫu' }));
