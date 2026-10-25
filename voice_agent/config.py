@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     livekit_agent_name: str = "portrait-voice"
     session_max_seconds: int = Field(1800, ge=60, le=7200)
     soniox_api_key: SecretStr = SecretStr("")
-    soniox_stt_model: str = "stt-rt-v5"
+    soniox_stt_model: str = "stt-rt-v4"
     soniox_language_hints: str = "vi,en"
-    soniox_max_endpoint_delay_ms: int = Field(700, ge=500, le=3000)
+    soniox_max_endpoint_delay_ms: int = Field(1000, ge=500, le=3000)
     soniox_tts_model: str = "tts-rt-v1-preview"
     soniox_tts_voice: str = "Nina"
     soniox_tts_language: str = "vi"
@@ -37,7 +37,6 @@ class Settings(BaseSettings):
     llm_provider: Literal["gemini", "openai", "local"] = "gemini"
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = "gemini-2.5-flash"
-    gemini_fast_responses: bool = True
     openai_api_key: SecretStr = SecretStr("")
     llm_model: str = "gpt-4o-mini"
     llm_base_url: str = ""
@@ -48,6 +47,7 @@ class Settings(BaseSettings):
     agent_timezone: str = "Asia/Ho_Chi_Minh"
     web_search_enabled: bool = True
     web_search_model: str = "gemini-3.1-flash-lite"
+    web_search_fast_responses: bool = True
     web_search_timeout_seconds: float = Field(8, ge=2, le=30)
     ocr_model: str = "gemini-2.5-flash"
     avatar_mode: Literal["photo", "flashhead"] = "photo"

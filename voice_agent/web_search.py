@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from google import genai
 from google.genai import types
-from livekit.agents import RunContext, function_tool
+from livekit.agents import function_tool
 
 from .config import Settings
 from .gemini import fast_thinking_config
@@ -71,7 +71,7 @@ async def search_web(settings: Settings, query: str) -> SearchResult:
     checked_at = datetime.now(ZoneInfo(settings.agent_timezone)).isoformat(timespec="seconds")
     started = time.perf_counter()
     try:
-        thinking = fast_thinking_config(settings.web_search_model) if settings.gemini_fast_responses else None
+        thinking = fast_thinking_config(settings.web_search_model) if settings.web_search_fast_responses else None
         async with genai.Client(
             api_key=settings.gemini_api_key.get_secret_value(),
             http_options=types.HttpOptions(
@@ -122,7 +122,7 @@ def make_search_tool(
     cache: OrderedDict[str, tuple[float, SearchResult]] = OrderedDict()
 
     @function_tool
-    async def search_current_information(context: RunContext, query: str) -> dict:
+    async def search_current_information(query: str) -> dict:
         """Look up current public information on the web, with sources.
 
         Use for news, weather, prices, current officeholders, opening hours or current
@@ -142,10 +142,7 @@ def make_search_tool(
             cache.move_to_end(key)
             logger.info("Web lookup reused", extra={"web_search_cache_hit": True})
         else:
-            # Speak only if the lookup takes a moment and the agent is idle. The
-            # lookup runs concurrently; neither speech nor playout blocks it.
-            async with context.with_filler("Dạ, em kiểm tra thông tin này một chút ạ.", delay=0.6):
-                result = await search_web(settings, query)
+            result = await search_web(settings, query)
             if result.status == "ok":
                 cache[key] = (time.monotonic(), result)
                 cache.move_to_end(key)

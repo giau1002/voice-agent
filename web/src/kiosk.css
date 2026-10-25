@@ -14,10 +14,9 @@
 .voice-interrupt { color: #738ead; background: white; border: 1px solid #dce7f4; }
 .voice-help { margin: 10px 0 0; color: #96a9bf; text-align: center; font-size: 9px; line-height: 1.7; }
 .voice-caption { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 11px 0 0; color: #4d7097; font-size: 11px; line-height: 1.8; text-align: center; }
-.last-heard { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0 0; padding: 9px 12px; color: #3c5b7a; background: #f0f6fc; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+.last-heard { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 9px 0 0; color: #8aa0ba; font-size: 10px; line-height: 1.7; }
 .last-heard svg { flex-shrink: 0; }
-.last-heard span { max-height: 4.8em; overflow: auto; overflow-wrap: anywhere; }
-.last-heard strong { font-weight: 600; }
+.last-heard span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .voice-console .playback-button { margin: 10px 0 0; }
 .kiosk-workspace > .demo-form-panel { grid-area: auto; }
 

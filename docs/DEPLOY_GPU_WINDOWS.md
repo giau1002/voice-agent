@@ -33,10 +33,11 @@ Git. Kiểm tra các giá trị sau để dùng cấu hình mới:
 ```dotenv
 LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-3.1-flash-lite
-GEMINI_FAST_RESPONSES=true
-SONIOX_STT_MODEL=stt-rt-v5
+SONIOX_STT_MODEL=stt-rt-v4
+SONIOX_MAX_ENDPOINT_DELAY_MS=1000
 WEB_SEARCH_ENABLED=true
 WEB_SEARCH_MODEL=gemini-3.1-flash-lite
+WEB_SEARCH_FAST_RESPONSES=true
 WEB_SEARCH_TIMEOUT_SECONDS=8
 
 LIVEKIT_URL=ws://127.0.0.1:7880
@@ -56,6 +57,15 @@ Giữ nguyên thư mục weights và môi trường GPU đã cài.
 
 ## Khởi động
 
+Nếu đã dùng commit `394da11` với STT v5, chạy trong checkout sau `git pull`:
+
+```powershell
+.venv\Scripts\python.exe scripts/restore-voice-config.py
+```
+
+Lệnh chỉ đặt lại model STT và thời gian chốt lượt trong `.env`. Cấu hình tăng
+tốc tìm kiếm chỉ áp dụng cho công cụ web; LLM hội thoại dùng cấu hình cũ.
+
 Nếu FlashHead chưa chạy, mở PowerShell trong thư mục FlashHead cũ:
 
 ```powershell
@@ -69,8 +79,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start.ps1
 ```
 
 Mở `http://127.0.0.1:8790` bằng trình duyệt trên server. Cho phép micro, bấm
-**Bắt đầu trò chuyện**, nói một câu ngắn và kiểm tra ô **Anh/chị vừa nói** có
-hiện chữ rồi trợ lý trả lời. Sau cập nhật mã web, tải lại trang bằng Ctrl+F5.
+**Bắt đầu trò chuyện**, nói một câu ngắn và kiểm tra chữ nhận dạng dưới nhân vật
+rồi nghe trợ lý trả lời. Sau cập nhật mã web, tải lại trang bằng Ctrl+F5.
 Log chạy bằng script nằm ở `logs/worker.out.log`, `logs/worker.err.log` và log API.
 
 Các URL localhost ở trên dành cho trình duyệt chạy trên cùng server. Nếu kiosk

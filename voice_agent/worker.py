@@ -111,37 +111,6 @@ async def entrypoint(ctx: JobContext):
     def on_user_state(event):
         send("user.state", {"state": event.new_state})
 
-    transcript_sequence = 0
-
-    @session.on("user_input_transcribed")
-    def on_user_transcript(event):
-        nonlocal transcript_sequence
-        if not event.transcript.strip():
-            return
-        # Send STT updates directly as well as LiveKit's transcription stream.
-        # This path does not depend on stream sender/track identity resolution.
-        send("user.transcript", {
-            "id": event.item_id or f"speech-{transcript_sequence}",
-            "text": event.transcript[:2000], "final": event.is_final,
-        })
-        if event.is_final:
-            transcript_sequence += 1
-
-    @session.on("conversation_item_added")
-    def on_conversation_item(event):
-        item = event.item
-        if item.type != "message":
-            return
-        # Timing only: keep citizen speech and form data out of these logs.
-        timings = {
-            f"{key}_ms": round(item.metrics[key] * 1000)
-            for key in ("transcription_delay", "end_of_turn_delay", "llm_node_ttft",
-                        "llm_node_ttfs", "tts_node_ttfb", "playback_latency", "e2e_latency")
-            if key in item.metrics
-        }
-        if timings:
-            logger.info("Voice turn latency", extra={"turn_role": item.role, **timings})
-
     @session.on("error")
     def on_error(event):
         # Never forward raw provider exceptions (they can contain request URLs/keys).
@@ -223,8 +192,7 @@ async def entrypoint(ctx: JobContext):
         room_options=room_io.RoomOptions(
             participant_identity=participant.identity,
             text_input=room_io.TextInputOptions(text_input_cb=on_text),
-            audio_input=room_io.AudioInputOptions(sample_rate=16000, frame_size_ms=20),
-            video_input=False,
+            audio_input=True, video_input=False,
             audio_output=avatar_output is None,
             text_output=room_io.TextOutputOptions(sync_transcription=True),
             close_on_disconnect=True,

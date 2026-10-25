@@ -1,5 +1,11 @@
 # Micro có tiếng nhưng không có phản hồi — 25/10/2026
 
+**Trạng thái hiện tại:** các thử nghiệm đổi STT sang v5, micro 16 kHz/20 ms,
+wrapper đo từng frame và data channel transcript bổ sung dưới đây đã được rút
+lại sau phản ánh hội thoại bị giật. Worker dùng lại STT v4, cấu hình đầu vào SDK
+cũ và kênh transcription gốc. Tài liệu này giữ số đo lịch sử, không phải cấu hình
+triển khai hiện hành; xem [hướng dẫn hiện tại](../DEPLOY_GPU_WINDOWS.md).
+
 WebSocket LiveKit HTTP 101 và Pending là trạng thái kết nối đang mở. Lời chào
 có thể phát dù đường nhận dạng micro đang chậm, nên không dùng lời chào làm
 bằng chứng STT hoạt động.

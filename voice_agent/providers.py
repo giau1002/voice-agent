@@ -2,7 +2,6 @@
 from livekit.plugins import google, openai, silero, soniox
 
 from .config import Settings
-from .gemini import fast_thinking_config
 
 
 def build_stt(settings: Settings):
@@ -30,12 +29,10 @@ def build_tts(settings: Settings, *, http_session=None):
 
 def build_llm(settings: Settings):
     if settings.llm_provider == "gemini":
-        thinking = fast_thinking_config(settings.gemini_model) if settings.gemini_fast_responses else None
         return google.LLM(
             api_key=settings.gemini_api_key.get_secret_value(),
             model=settings.gemini_model,
             temperature=settings.llm_temperature,
-            **({"thinking_config": thinking} if thinking is not None else {}),
         )
     return openai.LLM(
         api_key=settings.openai_api_key.get_secret_value() or "local-no-key",

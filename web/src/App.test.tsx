@@ -80,9 +80,9 @@ it('connects with the microphone and requests procedure guidance without opening
 it('shows partial recognized speech immediately and replaces it with the final phrase', async () => {
   await connect();
   act(() => mocks.events?.message({ id: 'speech', role: 'user', text: 'Tôi muốn', final: false }));
-  expect(screen.getByRole('status', { name: 'Lời nói đã nhận' })).toHaveTextContent('Tôi muốn');
+  expect(screen.getByText('Tôi muốn')).toBeInTheDocument();
   act(() => mocks.events?.message({ id: 'speech', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true }));
-  expect(screen.getByRole('status', { name: 'Lời nói đã nhận' })).toHaveTextContent('Tôi muốn làm giấy khai sinh');
+  expect(screen.getByText('Tôi muốn làm giấy khai sinh')).toBeInTheDocument();
   expect(screen.queryByRole('log')).not.toBeInTheDocument();
 });
 

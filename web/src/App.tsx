@@ -106,7 +106,6 @@ export default function App() {
     setError('');
     if (config?.auth_required && !access) { showSettings(true); setError('Nhập mã truy cập để bắt đầu phiên.'); return; }
     resumeFormOnReady.current = formSnapshot.current.visible;
-    setHeard('');
     await client.connect(access, true, input);
     if (!client.connected) resumeFormOnReady.current = false;
     setMic(client.microphoneEnabled());
@@ -187,7 +186,7 @@ export default function App() {
           <div className="voice-console">
             <div className="voice-state"><span className={'small-dot ' + (online ? 'active' : '')} /><strong>{title}</strong></div>
             {formOpen && answer && <p className="voice-caption">{answer}</p>}
-            {heard && <p className="last-heard" role="status" aria-label="Lời nói đã nhận" aria-live="polite"><Mic size={15} aria-hidden="true" /><span><strong>Anh/chị vừa nói:</strong> {heard}</span></p>}
+            {heard && <p className="last-heard"><Mic size={12} /><span>{heard}</span></p>}
             <div className="voice-controls">
               <button className={'voice-connect ' + (online ? 'online' : '')} onClick={() => void connect()} disabled={!busy && !online && !config?.configured} aria-label={online ? 'Kết thúc hội thoại' : busy ? 'Hủy kết nối' : 'Bắt đầu trò chuyện'}>
                 {busy ? <LoaderCircle size={18} className="spin" /> : online ? <PhoneOff size={18} /> : <Phone size={18} />}

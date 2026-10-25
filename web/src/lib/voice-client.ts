@@ -55,7 +55,6 @@ export class VoiceClient {
   private userSpeaking = false;
   private agentSpeaking = false;
   private avatarTrack: RemoteTrack | null = null;
-  private directTranscripts = false;
 
   constructor(private events: ClientEvents) {}
 
@@ -138,11 +137,6 @@ export class VoiceClient {
             this.userSpeaking = event.payload.state === 'speaking';
             if (this.userSpeaking) this.events.interrupt();
           }
-          if (event.type === 'user.transcript' && typeof event.payload.text === 'string' && event.payload.text.trim()) {
-            this.directTranscripts = true;
-            this.events.message({ id: 'stt:' + String(event.payload.id || 'current'),
-              role: 'user', text: event.payload.text.slice(0, 2000), final: event.payload.final === true });
-          }
           if (event.type === 'agent.error') this.events.error(String(event.payload.message || 'Agent gặp lỗi.'));
           if (event.type === 'session.expired') { this.events.error('Phiên đã hết thời gian. Bạn có thể mở phiên mới.'); void this.disconnect(); }
         } catch { /* Ignore unrecognized data envelopes. */ }
@@ -153,19 +147,16 @@ export class VoiceClient {
             ? room.localParticipant : room.remoteParticipants.get(info.identity);
           if (!participant || (!participant.isAgent && !participant.isLocal)) return;
           const role = participant.isAgent ? 'assistant' : 'user';
-          if (role === 'user' && this.directTranscripts) return;
           const messageId = info.identity + ':' + (reader.info.attributes?.['lk.segment_id'] || reader.info.id);
           let text = '';
           try {
             for await (const delta of reader) {
               if (!current()) return;
-              if (role === 'user' && this.directTranscripts) return;
               text += delta;
               this.events.message({ id: messageId, role, text, final: false });
               if (role === 'assistant') this.events.text(delta, false);
             }
             if (!current()) return;
-            if (role === 'user' && this.directTranscripts) return;
             this.events.message({ id: messageId, role, text,
               final: role === 'assistant' || reader.info.attributes?.['lk.transcription_final'] === 'true' });
             if (role === 'assistant') this.events.text('', true);
@@ -300,7 +291,6 @@ export class VoiceClient {
     const room = this.room, session = this.session;
     this.room = null; this.session = null;
     this.agentSpeaking = false; this.userSpeaking = false;
-    this.directTranscripts = false;
     this.meter.close();
     for (const elements of this.audio.values()) elements.forEach(element => { element.pause(); element.srcObject = null; element.remove(); });
     this.audio.clear(); this.events.interrupt(); this.events.link('offline'); this.events.agent('idle'); this.events.ended();

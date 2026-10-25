@@ -41,9 +41,20 @@ def test_fast_thinking_uses_controls_supported_by_model_family(model, expected):
     assert fast_thinking_config(model).model_dump(exclude_none=True, mode="json") == expected
 
 
-def test_unknown_models_and_opt_out_keep_provider_thinking_defaults():
+@pytest.mark.parametrize("fast_search", [False, True])
+def test_search_tuning_keeps_conversation_provider_defaults(fast_search):
     assert fast_thinking_config("custom-model") is None
-    settings = Settings(_env_file=None, gemini_api_key="test", gemini_fast_responses=False)
+    settings = Settings(_env_file=None, gemini_api_key="test",
+                        web_search_fast_responses=fast_search)
     with patch("voice_agent.providers.google.LLM") as model:
         build_llm(settings)
     assert "thinking_config" not in model.call_args.kwargs
+    assert model.call_args.kwargs["model"] == settings.gemini_model
+
+
+def test_agent_uses_the_sdk_speech_pipeline_without_per_frame_wrappers():
+    from livekit.agents import Agent
+
+    from voice_agent.assistant import PortraitAgent
+
+    assert PortraitAgent.stt_node is Agent.stt_node

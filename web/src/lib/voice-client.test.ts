@@ -201,28 +201,5 @@ describe('voice transport lifecycle', () => {
     expect(callbacks.message).not.toHaveBeenCalled();
   });
 
-  it('shows interim and final STT over agent data when no transcription stream arrives', async () => {
-    const callbacks = events(), client = new VoiceClient(callbacks);
-    await client.connect('', false, '');
-    const room = mocks.rooms[0];
-    const receive = room.handlers.get('DataReceived');
-    const packet = (text: string, final: boolean) => new TextEncoder().encode(JSON.stringify({
-      type: 'user.transcript', payload: { id: 'utterance', text, final },
-    }));
-    receive(packet('Tôi muốn', false), { isAgent: false }, 0, 'portrait');
-    expect(callbacks.message).not.toHaveBeenCalled();
-    receive(packet('Tôi muốn', false), { isAgent: true }, 0, 'portrait');
-    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn', final: false });
-    receive(packet('Tôi muốn làm giấy khai sinh', true), { isAgent: true }, 0, 'portrait');
-    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true });
-    const streams = room.streams.get('lk.transcription');
-    streams({ info: { id: 'late-stream', attributes: {} }, async *[Symbol.asyncIterator]() { yield 'Tôi'; } }, { identity: 'user' });
-    await flush();
-    expect(callbacks.message).toHaveBeenLastCalledWith({ id: 'stt:utterance', role: 'user', text: 'Tôi muốn làm giấy khai sinh', final: true });
-    expect(callbacks.text).not.toHaveBeenCalled();
-    await client.disconnect();
-    vi.mocked(callbacks.message).mockClear();
-    receive(packet('Phiên cũ', true), { isAgent: true }, 0, 'portrait');
-    expect(callbacks.message).not.toHaveBeenCalled();
-  });
+
 });

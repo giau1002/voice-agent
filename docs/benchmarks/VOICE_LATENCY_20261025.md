@@ -1,5 +1,10 @@
 # Kiểm tra độ trễ ngày 25/10/2026
 
+**Cập nhật phạm vi:** chỉ giữ tối ưu công cụ web. Các thay đổi thinking cho LLM
+hội thoại, STT/khung micro và câu báo bằng TTS khi tìm kiếm đã được rút lại.
+Cờ hiện hành là `WEB_SEARCH_FAST_RESPONSES`, chỉ dùng trong yêu cầu web lookup.
+Các số đo dưới đây là lịch sử thử nghiệm, không chứng minh hội thoại mượt hơn.
+
 Các số sau là từng lượt thử trên cấu hình đang chạy, không phải trung bình hay
 cam kết độ trễ. Câu thử là dữ liệu công khai, không chứa thông tin công dân.
 

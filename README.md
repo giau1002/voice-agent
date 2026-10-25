@@ -115,17 +115,14 @@ tài khoản Gemini và mất thêm thời gian khi truy vấn.
 cách dùng kiosk và điền biểu mẫu không gọi web. Câu hỏi tiếp nối dùng lại nguồn
 đã xác minh trong hội thoại khi đủ căn cứ. Truy vấn giống nhau được lưu tối đa
 90 giây, riêng từng phiên, tối đa 8 kết quả thành công; lỗi không được lưu.
-Khi cần tra cứu lâu, trợ lý nói một câu báo đang kiểm tra. Mỗi lần tra cứu có
-giới hạn `WEB_SEARCH_TIMEOUT_SECONDS=8`, không tự thử lại; hết thời gian thì nói
+Mỗi lần tra cứu có giới hạn `WEB_SEARCH_TIMEOUT_SECONDS=8`, không tự thử lại;
+hết thời gian thì nói
 rõ chưa xác minh được, không đoán phí hay quy định hiện hành.
 
-`GEMINI_FAST_RESPONSES=true` giảm mức suy luận bằng tham số phù hợp với dòng
-Gemini đang dùng, cho cả hội thoại và tìm kiếm. Đặt `false` để dùng mặc định của
-nhà cung cấp. `SONIOX_MAX_ENDPOINT_DELAY_MS=700` giảm thời gian chốt lượt nói;
-nếu thường ngắt giữa câu khi nói chậm, tăng lại 1000. Các thay đổi cần khởi động
-lại worker và kết nối phiên mới. Log `Voice turn latency` ghi riêng thời gian
-nhận dạng, chốt lượt, token/câu đầu, TTS và phát tiếng; `Web lookup completed`
-ghi thời gian tra cứu. Các log này không ghi nội dung hội thoại hay câu truy vấn.
+`WEB_SEARCH_FAST_RESPONSES=true` giảm mức suy luận chỉ cho yêu cầu tìm kiếm,
+độc lập với LLM hội thoại. Đặt `false` để dùng mặc định của nhà cung cấp cho tìm
+kiếm. `Web lookup completed` ghi thời gian tra cứu, không ghi câu truy vấn.
+Luồng STT, TTS, micro và avatar dùng cấu hình trước tối ưu tìm kiếm.
 
 Khung chat hiển thị nguồn và gợi ý tìm kiếm do nhà cung cấp trả về. Chỉ kết quả có
 grounding metadata và nguồn thực mới được xác nhận; lỗi tra cứu trả trạng thái
@@ -182,12 +179,10 @@ flowchart LR
   phải mô hình LLM. `turn_detection="stt"` dùng endpoint của Soniox để chốt câu.
 - Repo mẫu dùng **Soniox**, không phải Cartesia Sonic. TTS mặc định Soniox
   `tts-rt-v1-preview`, voice `Nina`, tiếng Việt. Có thể đổi model/voice bằng `.env`.
-- STT mặc định `stt-rt-v5`. Worker nhận micro ở 16 kHz mono, khung 20 ms, khớp
-  đầu vào Soniox. Nếu cấu hình cũ còn `SONIOX_STT_MODEL=stt-rt-v4`, có thể đổi
-  sang `stt-rt-v5` rồi khởi động lại worker. Log `Microphone audio received`,
-  `Microphone signal detected` và `Speech recognition finalized` phân biệt
-  đường truyền micro với dịch vụ nhận dạng; chỉ ghi thông số và độ dài, không
-  ghi nội dung nói hay lưu bản ghi âm.
+- STT mặc định `stt-rt-v4`, chốt lượt 1000 ms; đầu vào micro dùng mặc định SDK
+  24 kHz/50 ms như trước. Nếu đã cập nhật bản thử STT v5, chạy
+  `.venv/Scripts/python.exe scripts/restore-voice-config.py` rồi khởi động lại
+  worker để khôi phục hai giá trị STT trong `.env`, giữ các khóa và cấu hình khác.
 - LLM: `gemini`, `openai`, hoặc `local`. Local cần `LLM_BASE_URL` và `LLM_MODEL`.
   `LLM_PROVIDER=local` hỗ trợ endpoint OpenAI-compatible như Ollama/vLLM.
 - Prompt nằm ở [`prompts/system.md`](prompts/system.md), được đọc phía worker.
