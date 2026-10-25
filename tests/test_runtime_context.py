@@ -60,7 +60,7 @@ def test_agent_refreshes_clock_on_every_llm_request_including_midnight():
 
 
 def test_web_tool_is_only_advertised_when_configured_and_enabled():
-    configured = settings(gemini_api_key="test")
+    configured = settings(gemini_api_key="test", web_search_enabled=True)
     assert "Có công cụ search_current_information" in runtime_context(configured)
     assert "search_current_information" in [tool.info.name for tool in PortraitAgent(configured).tools]
     disabled = settings(gemini_api_key="test", web_search_enabled=False)

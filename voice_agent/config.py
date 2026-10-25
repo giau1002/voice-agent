@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     agent_prompt_file: str = "prompts/system.md"
     agent_greeting: str = "Dạ, em chào anh/chị. Anh/chị cần được hướng dẫn thủ tục nào ạ?"
     agent_timezone: str = "Asia/Ho_Chi_Minh"
-    web_search_enabled: bool = True
+    web_search_enabled: bool = False
     web_search_model: str = "gemini-3.1-flash-lite"
     web_search_fast_responses: bool = True
     web_search_timeout_seconds: float = Field(8, ge=2, le=30)

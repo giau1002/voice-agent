@@ -35,7 +35,7 @@ def test_grounding_requires_evidence_and_keeps_display_markup_out_of_model():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fast_search", [False, True])
 async def test_search_uses_builtin_google_search_and_does_not_return_or_log_key(caplog, fast_search):
-    settings = Settings(_env_file=None, gemini_api_key="private-test-key",
+    settings = Settings(_env_file=None, web_search_enabled=True, gemini_api_key="private-test-key",
                         web_search_fast_responses=fast_search)
     api = MagicMock()
     api.models.generate_content = AsyncMock(return_value=provider_response())
@@ -57,7 +57,7 @@ async def test_search_uses_builtin_google_search_and_does_not_return_or_log_key(
 
 @pytest.mark.asyncio
 async def test_search_failure_is_explicit_and_does_not_leak_provider_exception(caplog):
-    settings = Settings(_env_file=None, gemini_api_key="private-test-key")
+    settings = Settings(_env_file=None, web_search_enabled=True, gemini_api_key="private-test-key")
     with patch("voice_agent.web_search.genai.Client", side_effect=RuntimeError("secret-url?key=private-test-key")):
         result = await search_web(settings, "thời tiết tại Hà Nội")
     assert result.status == "error"
@@ -99,7 +99,7 @@ async def test_lookup_deadline_cancels_provider_without_leaking_or_retrying():
     api.models.generate_content = AsyncMock(side_effect=stalled)
     client = MagicMock()
     client.aio.__aenter__.return_value = api
-    settings = Settings(_env_file=None, gemini_api_key="test")
+    settings = Settings(_env_file=None, web_search_enabled=True, gemini_api_key="test")
     # Production validation keeps this >=2s; shorten the test's clock only.
     settings.web_search_timeout_seconds = 0.01
     with patch("voice_agent.web_search.genai.Client", return_value=client) as factory:
@@ -115,7 +115,7 @@ async def test_lookup_deadline_cancels_provider_without_leaking_or_retrying():
 
 @pytest.mark.asyncio
 async def test_tool_reuses_only_recent_verified_results_in_its_own_room():
-    settings = Settings(_env_file=None, gemini_api_key="test")
+    settings = Settings(_env_file=None, web_search_enabled=True, gemini_api_key="test")
     publish = AsyncMock()
     room_a = make_search_tool(settings, publish)
     room_b = make_search_tool(settings)
@@ -136,7 +136,7 @@ async def test_tool_reuses_only_recent_verified_results_in_its_own_room():
 
 @pytest.mark.asyncio
 async def test_failed_and_cancelled_lookups_are_not_cached():
-    tool = make_search_tool(Settings(_env_file=None, gemini_api_key="test"))
+    tool = make_search_tool(Settings(_env_file=None, web_search_enabled=True, gemini_api_key="test"))
     failed = SearchResult("error", "query")
     with patch("voice_agent.web_search.search_web", AsyncMock(side_effect=[
         failed, asyncio.CancelledError(), failed,

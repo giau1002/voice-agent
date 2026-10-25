@@ -169,6 +169,12 @@ class DemoForm:
                 }
             self.state.active, self.state.confirmed = False, True
         elif command.action == "close":
+            if command.fields:
+                self.state.fields = command.fields
+                self.state.sources = {
+                    key: command.sources.get(key, "user")
+                    for key, value in command.fields.model_dump().items() if value
+                }
             self.state.visible = False
             self.state.active = False
         else:

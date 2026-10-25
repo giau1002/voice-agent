@@ -108,3 +108,12 @@ def test_upload_endpoint_auth_size_rate_limit_and_no_disk_storage():
         for _ in range(4):
             assert client.post("/api/documents/ocr", content=png(), headers=headers).status_code == 200
         assert client.post("/api/documents/ocr", content=png(), headers=headers).status_code == 429
+
+
+def test_disabling_web_search_keeps_ocr_available():
+    settings = Settings(_env_file=None, app_env="test", gemini_api_key="private")
+    assert not settings.can_search_web
+    client = TestClient(create_app(settings))
+    config = client.get('/api/config').json()
+    assert config['web_search'] is False
+    assert config['ocr_enabled'] is True

@@ -102,3 +102,14 @@ async def test_voice_tools_open_and_close_birth_form_without_mixing_roles():
     reopened = await tools["open_birth_form"]()
     assert reopened["visible"] and reopened["fields"]["mother_name"] == "Nguyễn An"
     assert publish.await_count == 4
+
+
+@pytest.mark.asyncio
+async def test_closing_browser_form_preserves_uploaded_draft_not_yet_synced_to_voice():
+    form = DemoForm()
+    uploaded = FormFields(mother_name="Nguyễn Thu An")
+    await form.command(FormCommand(action="close", fields=uploaded, sources={"mother_name": "ocr"}))
+    assert not form.state.visible
+    opened = await {tool.info.name: tool for tool in form.tools()}["open_birth_form"]()
+    assert opened["fields"]["mother_name"] == "Nguyễn Thu An"
+    assert opened["sources"]["mother_name"] == "ocr"

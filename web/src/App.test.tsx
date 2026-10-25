@@ -66,13 +66,14 @@ it('keeps device settings and hides local mouth controls for the GPU avatar', as
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-it('connects with the microphone and requests procedure guidance without opening a form', async () => {
+it('offers birth registration help before receiving a form-opening event', async () => {
   await connect();
   expect(mocks.connect).toHaveBeenCalledWith('', true, '');
   fireEvent.click(screen.getByRole('button', { name: /^Đăng ký khai sinh/ }));
-  await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith(expect.stringContaining('Hãy hướng dẫn trước, chưa mở biểu mẫu')));
-  act(() => mocks.events?.message({ id: 'guide', role: 'assistant', text: 'Anh/chị muốn tìm hiểu thủ tục tại địa phương nào ạ?', final: true }));
-  expect(screen.getByText('Anh/chị muốn tìm hiểu thủ tục tại địa phương nào ạ?')).toBeInTheDocument();
+  await waitFor(() => expect(mocks.sendText).toHaveBeenCalledWith(expect.stringContaining('Tôi cần đăng ký giấy khai sinh')));
+  const offer = 'Dạ, anh/chị có muốn em mở tờ khai đăng ký khai sinh để điền ngay không ạ?';
+  act(() => mocks.events?.message({ id: 'guide', role: 'assistant', text: offer, final: true }));
+  expect(screen.getByText(offer)).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Tờ khai đăng ký khai sinh' })).not.toBeInTheDocument();
   expect(mocks.formCommand).not.toHaveBeenCalled();
 });
@@ -142,6 +143,58 @@ it('keeps a manual draft on OCR failure and confirms only a complete declaration
   expect(screen.getByRole('textbox', { name: /^Họ tên cha/ })).toHaveValue('');
   fireEvent.click(screen.getByRole('button', { name: 'Xác nhận tờ khai' }));
   expect(screen.getByRole('status')).toHaveTextContent('Chưa gửi đến cơ quan nào');
+});
+
+it('uploads and keeps OCR fields when voice pause and resume fail', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 1 }));
+  mocks.formCommand.mockRejectedValue(new Error('Request timed out'));
+  const fetchUpload = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    text: 'Mẹ: Nguyễn Thu An', fields: { mother_name: 'Nguyễn Thu An' }, warnings: [],
+  })));
+  vi.stubGlobal('fetch', fetchUpload);
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'giay-to.png')] } });
+  await screen.findByRole('button', { name: 'Thay tài liệu' });
+  await screen.findByText('Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.');
+  expect(fetchUpload).toHaveBeenCalledWith('/api/documents/ocr', expect.objectContaining({ method: 'POST' }));
+  expect(screen.getByRole('textbox', { name: /^Họ tên mẹ/ })).toHaveValue('Nguyễn Thu An');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 9 }));
+  expect(screen.getByRole('textbox', { name: /^Họ tên mẹ/ })).toHaveValue('Nguyễn Thu An');
+});
+
+it('starts the upload and shows extracted fields before a slow voice pause finishes', async () => {
+  await connect();
+  act(() => mocks.events?.form?.({ ...emptyForm(), visible: true, active: true, revision: 1 }));
+  let finishPause!: (state: DemoFormState) => void;
+  mocks.formCommand.mockImplementation((action: string, state: DemoFormState) => {
+    if (action === 'stop') return new Promise(resolve => { finishPause = resolve; });
+    const next = { ...state, active: true, revision: state.revision + 1 };
+    mocks.events?.form?.(next);
+    return Promise.resolve(next);
+  });
+  const upload = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    text: 'Mẹ: Nguyễn Thu An', fields: { mother_name: 'Nguyễn Thu An' }, warnings: [],
+  })));
+  vi.stubGlobal('fetch', upload);
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'giay-to.png')] } });
+  await waitFor(() => expect(screen.getByRole('textbox', { name: /^Họ tên mẹ/ })).toHaveValue('Nguyễn Thu An'));
+  expect(upload).toHaveBeenCalled();
+  act(() => {
+    const stopped = { ...emptyForm(), visible: true, revision: 2 };
+    mocks.events?.form?.(stopped); finishPause(stopped);
+  });
+  await waitFor(() => expect(mocks.formCommand).toHaveBeenCalledWith('start', expect.objectContaining({ revision: 2 })));
+  expect(screen.getByRole('textbox', { name: /^Họ tên mẹ/ })).toHaveValue('Nguyễn Thu An');
+});
+
+it('shows a useful upload error for a non-JSON server response', async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Mở biểu mẫu' }));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>Bad gateway</html>', { status: 502 })));
+  fireEvent.change(screen.getByLabelText(uploadLabel), { target: { files: [new File(['png'], 'giay-to.png')] } });
+  await screen.findByRole('alert');
+  expect(screen.getByRole('alert')).toHaveTextContent('Máy chủ chưa đọc được tệp');
 });
 
 it('ignores stale form packets so a closed form is not reopened', async () => {

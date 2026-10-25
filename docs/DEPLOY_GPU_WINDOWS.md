@@ -35,7 +35,7 @@ LLM_PROVIDER=gemini
 GEMINI_MODEL=gemini-3.1-flash-lite
 SONIOX_STT_MODEL=stt-rt-v4
 SONIOX_MAX_ENDPOINT_DELAY_MS=1000
-WEB_SEARCH_ENABLED=true
+WEB_SEARCH_ENABLED=false
 WEB_SEARCH_MODEL=gemini-3.1-flash-lite
 WEB_SEARCH_FAST_RESPONSES=true
 WEB_SEARCH_TIMEOUT_SECONDS=8
@@ -51,6 +51,8 @@ AVATAR_RENDERER_TOKEN=<token của renderer trên server này>
 ```
 
 Lấy token từ `.runtime/renderer-token.txt` trong thư mục FlashHead hiện có.
+Nếu `.env` trước đó đặt `WEB_SEARCH_ENABLED=true`, đổi lại `false` rồi restart
+API và worker để áp dụng việc tạm tắt tìm kiếm. OCR vẫn dùng `GEMINI_API_KEY`.
 Nếu renderer chạy cổng khác, sửa `AVATAR_RENDERER_URL` cho đúng. Khi cùng máy,
 dùng địa chỉ renderer trực tiếp; không dùng địa chỉ forward tunnel từ máy cũ.
 Giữ nguyên thư mục weights và môi trường GPU đã cài.

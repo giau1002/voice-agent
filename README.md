@@ -51,10 +51,10 @@ Log nằm trong `logs/`, không được commit.
 
 Giao diện kiosk giữ nhân vật lớn bên trái, phần hướng dẫn thủ tục bên phải;
 không có khung chat hay ô nhập tin nhắn. Bấm **Bắt đầu trò chuyện**, nói tên
-thủ tục hoặc chạm một nội dung gợi ý để nghe hướng dẫn. Trợ lý hỏi thông tin
-cần làm rõ và tra cứu trước khi đưa hướng dẫn thủ tục hiện hành.
+thủ tục hoặc chạm một nội dung gợi ý để được hỗ trợ. Khi nói cần đăng ký khai
+sinh, trợ lý hỏi có muốn mở tờ khai để điền ngay không; đồng ý thì mở form.
 
-Sau khi được hướng dẫn, nói **“Mở biểu mẫu giúp tôi”** hoặc bấm **Mở biểu mẫu**.
+Nói **“Mở biểu mẫu giúp tôi”**, đồng ý lời mời của trợ lý, hoặc bấm **Mở biểu mẫu**.
 Công cụ `open_birth_form` mở tờ khai ngay bên cạnh nhân vật; hỏi về một thủ tục
 không tự mở form. Nói **“Đóng biểu mẫu”** để trở lại hướng dẫn, giữ bản nháp
 trong phiên. Biểu mẫu hiện có là **Tờ khai đăng ký khai sinh**, gồm thông tin
@@ -104,15 +104,17 @@ thứ, giờ mới từ đồng hồ server theo `AGENT_TIMEZONE=Asia/Ho_Chi_Min
 định ngày vào prompt; qua nửa đêm trợ lý tự nhận ngữ cảnh ngày mới. Máy chủ cần
 đồng bộ giờ hệ thống chính xác. Dependency `tzdata` hỗ trợ múi giờ trên Windows.
 
-`WEB_SEARCH_ENABLED=true` bật công cụ tra cứu theo yêu cầu bằng Gemini + Google
-Search, sử dụng `GEMINI_API_KEY` hiện có và `WEB_SEARCH_MODEL=gemini-3.1-flash-lite`.
+`WEB_SEARCH_ENABLED=false` tạm tắt tìm kiếm web để ưu tiên hội thoại nhanh.
+OCR tài liệu vẫn hoạt động riêng. Muốn bật lại, đặt `WEB_SEARCH_ENABLED=true`
+để dùng Gemini + Google Search với `GEMINI_API_KEY` hiện có và
+`WEB_SEARCH_MODEL=gemini-3.1-flash-lite`.
 Công cụ dùng được cả khi LLM chính là Gemini, OpenAI hoặc local. Tin mới, thời
 tiết, giá cả, người đương nhiệm và quy định hiện hành cần tra cứu; hỏi ngày giờ
 hoặc trò chuyện thông thường không cần gọi web. Search có thể phát sinh phí theo
 tài khoản Gemini và mất thêm thời gian khi truy vấn.
 
-Ưu tiên phản hồi nhanh: nhu cầu ban đầu chưa rõ địa phương được hỏi lại ngay;
-cách dùng kiosk và điền biểu mẫu không gọi web. Câu hỏi tiếp nối dùng lại nguồn
+Ưu tiên phản hồi nhanh: nhu cầu khai sinh được hỏi mở tờ khai ngay;
+cách dùng kiosk và điền biểu mẫu không gọi web. Khi bật tìm kiếm, câu hỏi tiếp nối dùng lại nguồn
 đã xác minh trong hội thoại khi đủ căn cứ. Truy vấn giống nhau được lưu tối đa
 90 giây, riêng từng phiên, tối đa 8 kết quả thành công; lỗi không được lưu.
 Mỗi lần tra cứu có giới hạn `WEB_SEARCH_TIMEOUT_SECONDS=8`, không tự thử lại;

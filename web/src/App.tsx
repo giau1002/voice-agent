@@ -41,6 +41,8 @@ export default function App() {
   const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
   const attachment = useRef<HTMLInputElement>(null);
   const ocrAbort = useRef<AbortController | null>(null);
+  const serverFormRevision = useRef(0);
+  const localOcrDraft = useRef(false);
   const resumeFormOnReady = useRef(false);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [input, setInput] = useState(''); const [output, setOutput] = useState('');
@@ -61,10 +63,14 @@ export default function App() {
     interrupt: () => lips.clear(), error: setError, playback: setPlayback, quality: () => {},
     ended: () => {
       lips.clear(); setPlayback(true);
+      serverFormRevision.current = 0;
       setForm(current => ({ ...current, active: false, revision: 0 }));
     },
     video: setAvatarVideo,
     form: state => {
+      serverFormRevision.current = Math.max(serverFormRevision.current, state.revision);
+      // Keep an uploaded draft intact while OCR/synchronization is in progress.
+      if (ocrAbort.current || localOcrDraft.current) return;
       if (state.revision < formSnapshot.current.revision) return;
       formSnapshot.current = state; setForm(state); setFormOpen(state.visible);
     },
@@ -98,6 +104,7 @@ export default function App() {
     resumeFormOnReady.current = false;
     setFormBusy(true);
     void client.formCommand('start', formSnapshot.current)
+      .then(state => { localOcrDraft.current = false; saveDraft(state); setFormOpen(state.visible); })
       .catch(() => setError('Chưa tiếp tục được phiếu. Anh/chị chọn Hỏi đáp điền form để thử lại nhé.'))
       .finally(() => setFormBusy(false));
   }, [online, agent, client]);
@@ -118,19 +125,30 @@ export default function App() {
   async function chooseTopic(value: string) {
     if (!online || sending) return;
     setTopic(value); setLookup(null); setError(''); setSending(true);
-    try { await client.sendText('Tôi muốn được hướng dẫn về ' + value + '. Hãy hướng dẫn trước, chưa mở biểu mẫu.'); }
+    try { await client.sendText(value === 'Đăng ký khai sinh'
+      ? 'Tôi cần đăng ký giấy khai sinh.'
+      : 'Tôi muốn được hướng dẫn về ' + value + '.'); }
     catch (exception) { setError(exception instanceof Error ? exception.message : 'Chưa gửi được yêu cầu hướng dẫn.'); }
     finally { setSending(false); }
   }
   async function controlForm(action: 'start' | 'stop' | 'confirm' | 'close') {
     if (formBusy || ocrBusy) return;
+    if (action === 'confirm' && localOcrDraft.current) {
+      setError('Anh/chị chọn Hỏi đáp điền form, kiểm tra lại thông tin rồi xác nhận.'); return;
+    }
     if (action === 'confirm' && formProblem(form.fields)) { setError(formProblem(form.fields)); return; }
     if (!online) {
       const state = { ...form, visible: action !== 'close', active: false, confirmed: action === 'confirm' };
       saveDraft(state); setFormOpen(state.visible); return;
     }
     setFormBusy(true); setError('');
-    try { await client.formCommand(action, form); }
+    try {
+      const current = formSnapshot.current;
+      const result = await client.formCommand(action, { ...current, revision: serverFormRevision.current });
+      const accepted = action === 'close' && localOcrDraft.current
+        ? { ...current, visible: false, active: false, revision: result.revision } : result;
+      localOcrDraft.current = false; saveDraft(accepted); setFormOpen(accepted.visible);
+    }
     catch (exception) { setError(exception instanceof Error ? exception.message : 'Chưa cập nhật được biểu mẫu.'); }
     finally { setFormBusy(false); }
   }
@@ -144,27 +162,47 @@ export default function App() {
     if (file.size > 8 * 1024 * 1024) { setError('Tệp cần nhỏ hơn hoặc bằng 8 MB.'); return; }
     const controller = new AbortController(); ocrAbort.current = controller;
     setFormOpen(true); setOcrBusy(true); setError('');
-    let draft = formSnapshot.current;
+    const original = formSnapshot.current;
+    const draft = { ...original, active: false };
+    localOcrDraft.current = true;
+    saveDraft(draft);
+    // A slow or failed voice RPC must not prevent the HTTP upload from starting.
+    const pause = original.active && client.connected
+      ? client.formCommand('stop', original).catch(() => null) : Promise.resolve(null);
     try {
-      if (draft.active && client.connected) draft = await client.formCommand('stop', draft);
       const extension = file.name.split('.').pop()!.toLowerCase();
       const mime = ({ pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' })[extension]!;
       const response = await fetch('/api/documents/ocr', {
         method: 'POST', body: file, headers: { 'Content-Type': mime, ...(access ? { Authorization: 'Bearer ' + access } : {}) },
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(70000)]),
       });
-      const result = await response.json();
+      const result = await response.json().catch(() => ({ detail: 'Máy chủ chưa đọc được tệp. Anh/chị thử lại sau ít giây.' }));
       if (!response.ok) throw Error(typeof result.detail === 'string' ? result.detail : 'Chưa OCR được tài liệu.');
+      if (typeof result.text !== 'string' || !result.fields || typeof result.fields !== 'object'
+        || !Array.isArray(result.warnings)) throw Error('Kết quả đọc tài liệu chưa hợp lệ. Anh/chị thử lại nhé.');
       if (controller.signal.aborted) return;
       setDocumentName(file.name); setOcrText(result.text); setOcrWarnings(result.warnings);
       const fields = { ...draft.fields }, sources = { ...draft.sources };
       for (const key of Object.keys(fields) as FormKey[]) {
-        if (result.fields[key] && (!fields[key] || sources[key] === 'ocr')) { fields[key] = result.fields[key]; sources[key] = 'ocr'; }
+        if (typeof result.fields[key] === 'string' && result.fields[key] && (!fields[key] || sources[key] === 'ocr')) { fields[key] = result.fields[key]; sources[key] = 'ocr'; }
       }
       const updated = { ...draft, visible: true, fields, sources, active: false, confirmed: false };
       saveDraft(updated);
-      if (client.connected) await client.formCommand('start', updated);
+      setOcrBusy(false);
+      if (client.connected) {
+        setFormBusy(true);
+        try {
+          await pause;
+          if (controller.signal.aborted) return;
+          const synced = await client.formCommand('start', { ...updated, revision: serverFormRevision.current });
+          if (controller.signal.aborted) return;
+          localOcrDraft.current = false; saveDraft(synced); setFormOpen(synced.visible);
+        } catch {
+          setOcrWarnings([...result.warnings, 'Đã đọc và điền tài liệu. Anh/chị chọn Hỏi đáp điền form để trợ lý tiếp tục.']);
+        } finally { setFormBusy(false); }
+      } else localOcrDraft.current = false;
     } catch (exception) {
+      localOcrDraft.current = false;
       if (!controller.signal.aborted) setError(exception instanceof DOMException && exception.name === 'TimeoutError'
         ? 'OCR đang mất nhiều thời gian. Anh/chị thử lại với tệp nhỏ hơn nhé.'
         : exception instanceof Error ? exception.message : 'Chưa đọc được tài liệu.');
